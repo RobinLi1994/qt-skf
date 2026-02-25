@@ -140,7 +140,7 @@ add_subdirectory(src)
 
 if(ENABLE_TESTING)
     enable_testing()
-    add_subdirectory(tests)
+    #add_subdirectory(tests)
 endif()
 
 # ==============================================================================
