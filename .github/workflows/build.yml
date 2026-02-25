@@ -38,11 +38,56 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install OpenSSL (Universal)
-        # 安装 x86_64 和 arm64 两个架构的 OpenSSL
+      - name: Build Universal OpenSSL
+        # Homebrew 只提供当前架构的 OpenSSL，需要从源码编译 Universal 版本 (arm64 + x86_64)
         run: |
-          brew install openssl@3
-          echo "OPENSSL_ROOT_DIR=$(brew --prefix openssl@3)" >> $GITHUB_ENV
+          OPENSSL_VERSION="3.3.1"
+          OPENSSL_PREFIX="${GITHUB_WORKSPACE}/openssl-universal"
+          OPENSSL_SRC_DIR="${RUNNER_TEMP}/openssl-src"
+
+          # 下载 OpenSSL 源码
+          curl -sL "https://github.com/openssl/openssl/releases/download/openssl-${OPENSSL_VERSION}/openssl-${OPENSSL_VERSION}.tar.gz" \
+            -o "${RUNNER_TEMP}/openssl.tar.gz"
+          tar xzf "${RUNNER_TEMP}/openssl.tar.gz" -C "${RUNNER_TEMP}"
+
+          # 编译 arm64 版本
+          echo "--- Building OpenSSL for arm64 ---"
+          cp -R "${RUNNER_TEMP}/openssl-${OPENSSL_VERSION}" "${OPENSSL_SRC_DIR}-arm64"
+          cd "${OPENSSL_SRC_DIR}-arm64"
+          ./Configure darwin64-arm64-cc \
+            --prefix="${RUNNER_TEMP}/openssl-arm64" \
+            no-shared no-tests no-docs
+          make -j$(sysctl -n hw.ncpu)
+          make install_sw
+
+          # 编译 x86_64 版本
+          echo "--- Building OpenSSL for x86_64 ---"
+          cp -R "${RUNNER_TEMP}/openssl-${OPENSSL_VERSION}" "${OPENSSL_SRC_DIR}-x86_64"
+          cd "${OPENSSL_SRC_DIR}-x86_64"
+          ./Configure darwin64-x86_64-cc \
+            --prefix="${RUNNER_TEMP}/openssl-x86_64" \
+            no-shared no-tests no-docs
+          make -j$(sysctl -n hw.ncpu)
+          make install_sw
+
+          # 用 lipo 合并为 Universal Binary
+          echo "--- Creating Universal Binary ---"
+          mkdir -p "${OPENSSL_PREFIX}/lib"
+          cp -R "${RUNNER_TEMP}/openssl-arm64/include" "${OPENSSL_PREFIX}/include"
+
+          for lib in libssl.a libcrypto.a; do
+            lipo -create \
+              "${RUNNER_TEMP}/openssl-arm64/lib/${lib}" \
+              "${RUNNER_TEMP}/openssl-x86_64/lib/${lib}" \
+              -output "${OPENSSL_PREFIX}/lib/${lib}"
+            echo "Created universal ${lib}:"
+            lipo -info "${OPENSSL_PREFIX}/lib/${lib}"
+          done
+
+          # 复制 pkgconfig 文件（CMake FindOpenSSL 可能需要）
+          cp -R "${RUNNER_TEMP}/openssl-arm64/lib/pkgconfig" "${OPENSSL_PREFIX}/lib/pkgconfig" 2>/dev/null || true
+
+          echo "OPENSSL_ROOT_DIR=${OPENSSL_PREFIX}" >> $GITHUB_ENV
 
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
@@ -57,7 +102,8 @@ jobs:
             -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
             -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
-            -DOPENSSL_ROOT_DIR="${OPENSSL_ROOT_DIR}"
+            -DOPENSSL_ROOT_DIR="${OPENSSL_ROOT_DIR}" \
+            -DOPENSSL_USE_STATIC_LIBS=ON
 
       - name: Build
         run: cmake --build build -j$(sysctl -n hw.ncpu)
