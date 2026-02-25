@@ -78,33 +78,67 @@ if [ -d "vendor" ]; then
 fi
 
 # ==============================================================================
-# 5. 代码签名 (Ad-hoc 签名用于本地测试)
+# 5. 代码签名 (Ad-hoc 签名)
 # ==============================================================================
 echo "--- Step 5: Code Signing ---"
 if [ -d "${DIST_DIR}/${APP_NAME}.app" ]; then
     echo "Signing application bundle with ad-hoc signature..."
 
-    # 先签名所有框架和插件
-    find "${DIST_DIR}/${APP_NAME}.app/Contents/Frameworks" -type f -name "*.dylib" -o -name "*.framework" 2>/dev/null | while read -r lib; do
-        codesign --force --sign - "$lib" 2>/dev/null || true
+    # 签名 Frameworks 中的所有 dylib
+    find "${DIST_DIR}/${APP_NAME}.app/Contents/Frameworks" -type f \( -name "*.dylib" -o -name "*.so" \) 2>/dev/null | while read -r lib; do
+        codesign --force --sign - --timestamp=none "$lib" 2>/dev/null || true
     done
 
+    # 签名 Frameworks 中的 framework bundle
+    find "${DIST_DIR}/${APP_NAME}.app/Contents/Frameworks" -name "*.framework" -maxdepth 1 2>/dev/null | while read -r fw; do
+        codesign --force --sign - --timestamp=none "$fw" 2>/dev/null || true
+    done
+
+    # 签名 PlugIns
     find "${DIST_DIR}/${APP_NAME}.app/Contents/PlugIns" -type f -name "*.dylib" 2>/dev/null | while read -r plugin; do
-        codesign --force --sign - "$plugin" 2>/dev/null || true
+        codesign --force --sign - --timestamp=none "$plugin" 2>/dev/null || true
     done
 
-    # 最后签名整个 .app bundle（deep sign）
-    codesign --force --deep --sign - "${DIST_DIR}/${APP_NAME}.app"
+    # 签名主可执行文件
+    codesign --force --sign - --timestamp=none "${DIST_DIR}/${APP_NAME}.app/Contents/MacOS/${APP_NAME}" 2>/dev/null || true
+
+    # 签名整个 .app bundle
+    codesign --force --deep --sign - --timestamp=none "${DIST_DIR}/${APP_NAME}.app"
 
     # 验证签名
     if codesign --verify --deep --strict "${DIST_DIR}/${APP_NAME}.app" 2>&1; then
-        echo "✓ Code signing successful"
+        echo "Code signing successful"
     else
-        echo "⚠ Code signing verification failed, but continuing..."
+        echo "WARN: Code signing verification failed, but continuing..."
     fi
 else
     echo "Skipping code signing (no .app bundle)"
 fi
+
+# ==============================================================================
+# 5.1 创建用户说明文件
+# ==============================================================================
+cat > "${DIST_DIR}/安装说明.txt" << 'README'
+# wekey-skf 安装说明
+
+## 首次打开
+由于本应用未经 Apple 公证，首次打开时 macOS 会提示安全警告。
+请按以下步骤操作：
+
+方法一（推荐）：
+1. 右键点击 wekey-skf.app
+2. 选择“打开”
+3. 在弹出的对话框中点击“打开”
+
+方法二（终端命令）：
+打开终端，执行：
+  sudo xattr -rd com.apple.quarantine /Applications/wekey-skf.app
+
+方法三（系统设置）：
+1. 打开“系统设置” -> “隐私与安全性”
+2. 在“安全性”部分找到“wekey-skf”相关提示
+3. 点击“仍然打开”
+README
 
 # ==============================================================================
 # 6. 创建 DMG
