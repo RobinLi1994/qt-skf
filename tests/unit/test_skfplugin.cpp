@@ -159,13 +159,13 @@ private slots:
 
     void testUninitializedSign() {
         SkfPlugin plugin;
-        auto r = plugin.sign("dev", "app", "container", QByteArray("data"), "SM2");
+        auto r = plugin.sign("dev", "app", "container", QByteArray("data"));
         QVERIFY(r.isErr());
     }
 
     void testUninitializedVerify() {
         SkfPlugin plugin;
-        auto r = plugin.verify("dev", "app", "container", QByteArray("data"), QByteArray("sig"), "SM2");
+        auto r = plugin.verify("dev", "app", "container", QByteArray("data"), QByteArray("sig"));
         QVERIFY(r.isErr());
     }
 

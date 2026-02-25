@@ -38,7 +38,7 @@ jobs:
       matrix:
         include:
           # Intel / x86_64
-          - runner: macos-13
+          - runner: macos-12
             arch: amd64
             qt_arch: clang_64
           # Apple Silicon / arm64
@@ -103,27 +103,17 @@ jobs:
           - runner: windows-latest
             arch: amd64
             qt_arch: win64_msvc2022_64
-          # ARM64
-          - runner: windows-11-arm
-            arch: arm64
-            qt_arch: win64_msvc2022_arm64
+          # 注意: GitHub Actions 暂不支持 Windows ARM64 runner
+          # 如需 ARM64 构建,请使用自托管 runner 或其他 CI 平台
     runs-on: ${{ matrix.runner }}
     name: Windows ${{ matrix.arch }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install OpenSSL (amd64)
+      - name: Install OpenSSL
         # windows-latest 预装了 OpenSSL 3，直接设置 OPENSSL_ROOT_DIR 供 cmake 找到
-        if: matrix.arch == 'amd64'
         run: |
           echo "OPENSSL_ROOT_DIR=C:\Program Files\OpenSSL" >> $env:GITHUB_ENV
-
-      - name: Install OpenSSL (arm64)
-        # windows-11-arm runner 不保证预装 OpenSSL，用 choco 显式安装
-        if: matrix.arch == 'arm64'
-        run: |
-          choco install openssl --no-progress -y
-          echo "OPENSSL_ROOT_DIR=C:\Program Files\OpenSSL-Win64" >> $env:GITHUB_ENV
 
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
