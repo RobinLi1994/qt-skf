@@ -38,7 +38,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Cache Universal OpenSSL
+        id: cache-openssl
+        uses: actions/cache@v4
+        with:
+          path: openssl-universal
+          key: openssl-3.3.1-universal-macos-v1
+
+      - name: Cache CMake _deps (ElaWidgetTools 等)
+        uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: cmake-deps-macos-${{ hashFiles('CMakeLists.txt') }}-${{ env.QT_VERSION }}
+          restore-keys: |
+            cmake-deps-macos-
+
       - name: Build Universal OpenSSL
+        if: steps.cache-openssl.outputs.cache-hit != 'true'
         # Homebrew 只提供当前架构的 OpenSSL，需要从源码编译 Universal 版本 (arm64 + x86_64)
         run: |
           OPENSSL_VERSION="3.3.1"
@@ -88,6 +104,10 @@ jobs:
           cp -R "${RUNNER_TEMP}/openssl-arm64/lib/pkgconfig" "${OPENSSL_PREFIX}/lib/pkgconfig" 2>/dev/null || true
 
           echo "OPENSSL_ROOT_DIR=${OPENSSL_PREFIX}" >> $GITHUB_ENV
+
+      - name: Set OpenSSL path
+        # 缓存命中时上面的编译步骤会跳过，需要单独设置环境变量
+        run: echo "OPENSSL_ROOT_DIR=${GITHUB_WORKSPACE}/openssl-universal" >> $GITHUB_ENV
 
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
@@ -143,6 +163,14 @@ jobs:
     name: Windows ${{ matrix.arch }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Cache CMake _deps (ElaWidgetTools 等)
+        uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: cmake-deps-windows-${{ matrix.arch }}-${{ hashFiles('CMakeLists.txt') }}-${{ env.QT_VERSION }}
+          restore-keys: |
+            cmake-deps-windows-${{ matrix.arch }}-
 
       - name: Install OpenSSL
         # windows-latest 预装了 OpenSSL 3，直接设置 OPENSSL_ROOT_DIR 供 cmake 找到
