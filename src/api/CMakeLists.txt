@@ -24,9 +24,10 @@ target_link_libraries(wekey_api_dto PUBLIC
 # 设置编译选项
 target_compile_features(wekey_api_dto PUBLIC cxx_std_17)
 target_compile_options(wekey_api_dto PRIVATE
-    -Wall -Wextra -Werror
-    $<$<CONFIG:Debug>:-g -O0>
-    $<$<CONFIG:Release>:-O2>
+    $<$<CXX_COMPILER_ID:MSVC>:/W4>
+    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Werror>
+    $<$<AND:$<CONFIG:Debug>,$<NOT:$<CXX_COMPILER_ID:MSVC>>>:-g -O0>
+    $<$<AND:$<CONFIG:Release>,$<NOT:$<CXX_COMPILER_ID:MSVC>>>:-O2>
 )
 
 # HTTP 服务器库 (M4.2 ~ M4.5)
@@ -54,7 +55,8 @@ target_link_libraries(wekey_api_server PUBLIC
 
 target_compile_features(wekey_api_server PUBLIC cxx_std_17)
 target_compile_options(wekey_api_server PRIVATE
-    -Wall -Wextra -Werror
-    $<$<CONFIG:Debug>:-g -O0>
-    $<$<CONFIG:Release>:-O2>
+    $<$<CXX_COMPILER_ID:MSVC>:/W4>
+    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Werror>
+    $<$<AND:$<CONFIG:Debug>,$<NOT:$<CXX_COMPILER_ID:MSVC>>>:-g -O0>
+    $<$<AND:$<CONFIG:Release>,$<NOT:$<CXX_COMPILER_ID:MSVC>>>:-O2>
 )

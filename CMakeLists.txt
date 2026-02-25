@@ -120,9 +120,10 @@ if(NOT elawidgettools_POPULATED)
         ${elawidgettools_BINARY_DIR}/ElaWidgetTools
     )
 
-    # 对 ElaWidgetTools 目标关闭 -Werror，避免第三方代码警告导致编译失败
+    # 对 ElaWidgetTools 目标关闭 -Werror 和 /WX，避免第三方代码警告导致编译失败
     if(TARGET ElaWidgetTools)
         target_compile_options(ElaWidgetTools PRIVATE
+            $<$<CXX_COMPILER_ID:MSVC>:/W3 /WX->
             $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wno-error>
         )
     endif()
