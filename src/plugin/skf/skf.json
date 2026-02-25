@@ -1,0 +1,8 @@
+{
+    "Keys": ["skf"],
+    "Name": "SKF Driver Plugin",
+    "Version": "1.0.0",
+    "Vendor": "TrustAsia",
+    "Description": "智能密码钥匙 (SKF) 驱动插件",
+    "ApiVersion": "1.1"
+}
