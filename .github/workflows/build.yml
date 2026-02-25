@@ -1,0 +1,159 @@
+name: Build & Test
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  # 手动触发打包
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: "打包平台"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - all
+          - macos
+          - windows
+      skip_tests:
+        description: "跳过单元测试"
+        required: false
+        default: false
+        type: boolean
+
+env:
+  QT_VERSION: "6.10.2"
+  BUILD_TYPE: Release
+
+jobs:
+  # ==============================================================================
+  # macOS 构建 (amd64 + arm64)
+  # ==============================================================================
+  build-macos:
+    if: github.event_name != 'workflow_dispatch' || inputs.platform == 'all' || inputs.platform == 'macos'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Intel / x86_64
+          - runner: macos-13
+            arch: amd64
+            qt_arch: clang_64
+          # Apple Silicon / arm64
+          - runner: macos-14
+            arch: arm64
+            qt_arch: clang_64
+    runs-on: ${{ matrix.runner }}
+    name: macOS ${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install OpenSSL
+        # macOS runner 自带 LibreSSL，cmake find_package(OpenSSL) 需要 Homebrew 的 openssl@3
+        run: |
+          brew install openssl@3
+          echo "OPENSSL_ROOT_DIR=$(brew --prefix openssl@3)" >> $GITHUB_ENV
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          arch: ${{ matrix.qt_arch }}
+          modules: "qthttpserver qtwebsockets"
+
+      - name: Configure
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+            -DOPENSSL_ROOT_DIR="${OPENSSL_ROOT_DIR}"
+
+      - name: Build
+        run: cmake --build build -j$(sysctl -n hw.ncpu)
+
+      - name: Test
+        if: inputs.skip_tests != true
+        run: cd build && ctest --output-on-failure -j$(sysctl -n hw.ncpu)
+
+      - name: Package
+        run: bash scripts/package_mac.sh
+        env:
+          # 将架构信息传递给打包脚本，用于生成带架构后缀的 dmg 文件名
+          PKG_ARCH: ${{ matrix.arch }}
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wekey-skf-macos-${{ matrix.arch }}
+          path: wekey-skf-macos-${{ matrix.arch }}.dmg
+          if-no-files-found: warn
+
+  # ==============================================================================
+  # Windows 构建 (amd64 + arm64)
+  # ==============================================================================
+  build-windows:
+    if: github.event_name != 'workflow_dispatch' || inputs.platform == 'all' || inputs.platform == 'windows'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # x86_64
+          - runner: windows-latest
+            arch: amd64
+            qt_arch: win64_msvc2022_64
+          # ARM64
+          - runner: windows-11-arm
+            arch: arm64
+            qt_arch: win64_msvc2022_arm64
+    runs-on: ${{ matrix.runner }}
+    name: Windows ${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install OpenSSL (amd64)
+        # windows-latest 预装了 OpenSSL 3，直接设置 OPENSSL_ROOT_DIR 供 cmake 找到
+        if: matrix.arch == 'amd64'
+        run: |
+          echo "OPENSSL_ROOT_DIR=C:\Program Files\OpenSSL" >> $env:GITHUB_ENV
+
+      - name: Install OpenSSL (arm64)
+        # windows-11-arm runner 不保证预装 OpenSSL，用 choco 显式安装
+        if: matrix.arch == 'arm64'
+        run: |
+          choco install openssl --no-progress -y
+          echo "OPENSSL_ROOT_DIR=C:\Program Files\OpenSSL-Win64" >> $env:GITHUB_ENV
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          arch: ${{ matrix.qt_arch }}
+          modules: "qthttpserver qtwebsockets"
+
+      - name: Configure
+        run: |
+          cmake -B build `
+            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} `
+            -DOPENSSL_ROOT_DIR="$env:OPENSSL_ROOT_DIR"
+
+      - name: Build
+        run: cmake --build build --config ${{ env.BUILD_TYPE }} -j $env:NUMBER_OF_PROCESSORS
+
+      - name: Test
+        if: inputs.skip_tests != true
+        run: cd build && ctest --output-on-failure --build-config ${{ env.BUILD_TYPE }} -j $env:NUMBER_OF_PROCESSORS
+
+      - name: Package
+        run: powershell -ExecutionPolicy Bypass -File scripts/package_win.ps1
+        env:
+          # 将架构信息传递给打包脚本，用于生成带架构后缀的 zip 文件名
+          PKG_ARCH: ${{ matrix.arch }}
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wekey-skf-windows-${{ matrix.arch }}
+          path: wekey-skf-windows-${{ matrix.arch }}.zip
+          if-no-files-found: warn
