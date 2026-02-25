@@ -61,17 +61,50 @@ if ($WinDeployQt) {
 }
 
 # ==============================================================================
-# 4. 复制 vendor 库 (SKF 驱动)
+# 4. 复制 OpenSSL DLL
 # ==============================================================================
-Write-Host "--- Step 4: Copy Vendor Libraries ---"
+Write-Host "--- Step 4: Copy OpenSSL Libraries ---"
+$OpenSSLPaths = @(
+    $env:OPENSSL_ROOT_DIR,
+    "C:\Program Files\OpenSSL",
+    "C:\Program Files\OpenSSL-Win64",
+    "C:\OpenSSL-Win64"
+)
+$OpenSSLFound = $false
+foreach ($sslPath in $OpenSSLPaths) {
+    if ($sslPath -and (Test-Path "$sslPath\bin\libcrypto-3-x64.dll")) {
+        Write-Host "Found OpenSSL at: $sslPath"
+        Copy-Item "$sslPath\bin\libcrypto-3-x64.dll" -Destination $DistDir
+        Copy-Item "$sslPath\bin\libssl-3-x64.dll" -Destination $DistDir
+        $OpenSSLFound = $true
+        break
+    }
+}
+if (-not $OpenSSLFound) {
+    # 尝试从 PATH 中查找
+    $cryptoDll = Get-Command "libcrypto-3-x64.dll" -ErrorAction SilentlyContinue
+    if ($cryptoDll) {
+        Write-Host "Found OpenSSL DLLs in PATH"
+        Copy-Item $cryptoDll.Source -Destination $DistDir
+        $sslDll = Get-Command "libssl-3-x64.dll" -ErrorAction SilentlyContinue
+        if ($sslDll) { Copy-Item $sslDll.Source -Destination $DistDir }
+    } else {
+        Write-Host "WARN: OpenSSL DLLs not found, application may fail to start"
+    }
+}
+
+# ==============================================================================
+# 5. 复制 vendor 库 (SKF 驱动)
+# ==============================================================================
+Write-Host "--- Step 5: Copy Vendor Libraries ---"
 if (Test-Path "vendor") {
     Copy-Item -Recurse "vendor" -Destination "${DistDir}/vendor"
 }
 
 # ==============================================================================
-# 5. 创建 ZIP
+# 6. 创建 ZIP
 # ==============================================================================
-Write-Host "--- Step 5: Create ZIP ---"
+Write-Host "--- Step 6: Create ZIP ---"
 if (Test-Path $ZipName) {
     Remove-Item $ZipName
 }
