@@ -11,11 +11,10 @@
 #include <QHBoxLayout>
 #include <QIcon>
 #include <QLabel>
+#include <QTimer>
 
 #ifdef Q_OS_WIN
 #include <windows.h>
-// Explorer 重启后重新广播此消息，托盘图标需要重新注册
-static const UINT kWmTaskbarCreated = ::RegisterWindowMessage(L"TaskbarCreated");
 #endif
 
 #include <ElaContentDialog.h>
@@ -103,9 +102,12 @@ MainWindow::MainWindow(QWidget* parent) : ElaWindow(parent) {
         setIsDefaultClosed(false);
         connect(this, &MainWindow::closeButtonClicked, this, [this]() {
             hide();
-            // 修复 Windows：hide() 可能导致托盘图标丢失，立即重新注册
+            // 修复 Windows：hide() 后延迟一个事件循环再重新注册托盘图标，
+            // 确保 Windows 消息泵已处理完 WM_HIDE，避免注册时句柄状态不稳定
 #ifdef Q_OS_WIN
-            systemTray_->reinstall();
+            QTimer::singleShot(0, this, [this]() {
+                if (systemTray_) systemTray_->reinstall();
+            });
 #endif
         });
     } else {
@@ -144,8 +146,10 @@ void MainWindow::showWindow() {
 bool MainWindow::nativeEvent(const QByteArray& eventType, void* message, qintptr* result) {
     // 修复 Windows：Explorer 重启后（如系统更新）托盘图标会丢失，
     // TaskbarCreated 消息通知所有程序重新注册托盘图标
+    // 使用局部 static 避免全局初始化时 windows.h 类型污染 macOS clangd
+    static const UINT wmTaskbarCreated = ::RegisterWindowMessage(L"TaskbarCreated");
     const MSG* msg = static_cast<const MSG*>(message);
-    if (msg->message == kWmTaskbarCreated && systemTray_) {
+    if (msg->message == wmTaskbarCreated && systemTray_) {
         systemTray_->reinstall();
     }
     return ElaWindow::nativeEvent(eventType, message, result);
