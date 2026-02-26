@@ -11,7 +11,6 @@
 set -euo pipefail
 
 APP_NAME="wekey-skf"
-BUILD_DIR="build-release"
 DIST_DIR="dist"
 # 优先使用 CI 传入的 PKG_ARCH，本地运行时自动检测当前架构
 ARCH="${PKG_ARCH:-$(uname -m)}"
@@ -23,15 +22,23 @@ DMG_NAME="${APP_NAME}-macos-${ARCH}.dmg"
 echo "==> macOS Packaging: ${APP_NAME} [${ARCH}]"
 
 # ==============================================================================
-# 1. Release 构建
+# 1. Release 构建（CI 环境中使用已有的 build 目录，跳过重新构建）
 # ==============================================================================
 echo "--- Step 1: Release Build ---"
-cmake -B "${BUILD_DIR}" \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_EXPORT_COMPILE_COMMANDS=OFF
+if [ -n "${CI:-}" ] && [ -d "build" ]; then
+    # CI 环境：直接使用 CI 已经构建好的产物（包含正确的架构配置）
+    BUILD_DIR="build"
+    echo "CI environment detected, using existing build directory: ${BUILD_DIR}"
+else
+    # 本地环境：执行完整构建
+    BUILD_DIR="build-release"
+    cmake -B "${BUILD_DIR}" \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_EXPORT_COMPILE_COMMANDS=OFF
 
-NPROC=$(sysctl -n hw.ncpu 2>/dev/null || echo 4)
-cmake --build "${BUILD_DIR}" -j"${NPROC}"
+    NPROC=$(sysctl -n hw.ncpu 2>/dev/null || echo 4)
+    cmake --build "${BUILD_DIR}" -j"${NPROC}"
+fi
 
 # ==============================================================================
 # 2. 准备分发目录

@@ -10,7 +10,6 @@
 $ErrorActionPreference = "Stop"
 
 $AppName = "wekey-skf"
-$BuildDir = "build-release"
 $DistDir = "dist"
 # 优先使用 CI 传入的 PKG_ARCH，本地运行时默认 amd64
 $PkgArch = if ($env:PKG_ARCH) { $env:PKG_ARCH } else { "amd64" }
@@ -19,15 +18,23 @@ $ZipName = "${AppName}-windows-${PkgArch}.zip"
 Write-Host "==> Windows Packaging: ${AppName} [${PkgArch}]"
 
 # ==============================================================================
-# 1. Release 构建
+# 1. Release 构建（CI 环境中使用已有的 build 目录，跳过重新构建）
 # ==============================================================================
 Write-Host "--- Step 1: Release Build ---"
-cmake -B $BuildDir `
-    -DCMAKE_BUILD_TYPE=Release `
-    -DCMAKE_EXPORT_COMPILE_COMMANDS=OFF
+if ($env:CI -and (Test-Path "build")) {
+    # CI 环境：直接使用 CI 已经构建好的产物
+    $BuildDir = "build"
+    Write-Host "CI environment detected, using existing build directory: $BuildDir"
+} else {
+    # 本地环境：执行完整构建
+    $BuildDir = "build-release"
+    cmake -B $BuildDir `
+        -DCMAKE_BUILD_TYPE=Release `
+        -DCMAKE_EXPORT_COMPILE_COMMANDS=OFF
 
-$Nproc = [Environment]::ProcessorCount
-cmake --build $BuildDir --config Release -j $Nproc
+    $Nproc = [Environment]::ProcessorCount
+    cmake --build $BuildDir --config Release -j $Nproc
+}
 
 # ==============================================================================
 # 2. 准备分发目录
