@@ -30,8 +30,9 @@ Result<void> HttpServer::start(int port) {
         return Result<void>::err(
             Error(Error::Fail, "server is already running", "HttpServer::start"));
     }
-    tcpServer_->setMaxPendingConnections(512);  // 增大 accept 队列                                                                                                               │
+
     tcpServer_ = new QTcpServer(this);
+    tcpServer_->setMaxPendingConnections(512);
 
     // 确保端口独占绑定，防止其他程序复用端口
     // 注意：在 macOS 上，QTcpServer 默认行为已经是独占的
