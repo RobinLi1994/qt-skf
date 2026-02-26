@@ -457,14 +457,16 @@ HttpResponse BusinessHandlers::handleExportCert(const HttpRequest& request) {
     // 构建证书数组
     QJsonArray dataArray;
     
-    // 添加加密证书 (certType=0 在前)
-    if (encCertResult.isOk()) {
-        dataArray.append(certToJson(encCertResult.value()));
-    }
-    
-    // 添加签名证书 (certType=1 在后)
+
+
+    // 添加签名证书 (certType=0 在前)
     if (signCertResult.isOk()) {
         dataArray.append(certToJson(signCertResult.value()));
+    }
+
+    // 添加加密证书 (certType=1 在后)
+    if (encCertResult.isOk()) {
+        dataArray.append(certToJson(encCertResult.value()));
     }
     
     if (dataArray.isEmpty()) {
