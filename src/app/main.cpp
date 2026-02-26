@@ -62,40 +62,20 @@ int main(int argc, char* argv[]) {
         ElaMessageBar::success(ElaMessageBarType::TopRight, "HTTP API 已启动",
             QString("监听端口: %1").arg(port), 3000, mainWindowPtr);
 
-        // 定期检查 HTTP 服务器状态，停止监听时自动尝试重启
+        // 定期检查 HTTP 服务器状态，防止端口被其他程序占用
         auto* statusChecker = new QTimer(&app);
         QObject::connect(statusChecker, &QTimer::timeout, [httpServer, mainWindowPtr, port]() {
-            static int retryCount = 0;
-            static const int maxRetries = 3;
-
-            if (!httpServer->isListening()) {
-                if (retryCount < maxRetries) {
-                    retryCount++;
-                    LOG_ERROR(QString("HTTP API 已停止监听端口 %1，尝试自动恢复 (%2/%3)")
-                        .arg(port).arg(retryCount).arg(maxRetries));
-                    httpServer->stop();
-                    auto restartResult = httpServer->start(port);
-                    if (restartResult.isOk()) {
-                        LOG_INFO(QString("HTTP API 自动恢复成功，端口: %1").arg(port));
-                        ElaMessageBar::success(ElaMessageBarType::TopRight, "HTTP API 已恢复",
-                            QString("端口 %1 重新监听中").arg(port), 3000, mainWindowPtr);
-                        retryCount = 0;
-                    } else {
-                        LOG_ERROR(QString("HTTP API 自动恢复失败: %1").arg(restartResult.error().message()));
-                    }
-                } else {
-                    LOG_ERROR(QString("HTTP API 自动恢复失败，已达最大重试次数 %1").arg(maxRetries));
-                    ElaMessageBar::error(ElaMessageBarType::TopRight, "HTTP API 异常",
-                        QString("端口 %1 多次恢复失败，API 功能已失效").arg(port),
-                        10000, mainWindowPtr);
-                }
-            } else {
-                // 服务器正常运行，重置重试计数
-                retryCount = 0;
+            static bool wasListening = true;
+            if (wasListening && !httpServer->isListening()) {
+                wasListening = false;
+                LOG_ERROR(QString("HTTP API 已停止监听端口 %1，可能被其他程序占用").arg(port));
+                ElaMessageBar::error(ElaMessageBarType::TopRight, "HTTP API 异常",
+                    QString("端口 %1 已被其他程序占用，API 功能已失效").arg(port),
+                    10000, mainWindowPtr);
             }
         });
-        // 每 10 秒检查一次（缩短检查间隔以更快发现问题）
-        statusChecker->start(10000);
+        // 每 30 秒检查一次
+        statusChecker->start(30000);
     } else {
         LOG_ERROR(QString("HTTP API 启动失败: %1").arg(result.error().message()));
         ElaMessageBar::error(ElaMessageBarType::TopRight, "HTTP API 启动失败",

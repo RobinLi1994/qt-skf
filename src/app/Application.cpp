@@ -11,14 +11,6 @@
 #include <QMessageLogger>
 #include <QStandardPaths>
 
-// 进程存活检测：kill(pid, 0) 用于检查进程是否存在
-#ifdef Q_OS_UNIX
-#include <signal.h>
-#endif
-#ifdef Q_OS_WIN
-#include <windows.h>
-#endif
-
 #include "config/Config.h"
 #include "log/Logger.h"
 #include "plugin/PluginManager.h"
@@ -78,70 +70,33 @@ bool Application::acquireSingleInstanceLock() {
     QString lockPath = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
     lockPath += "/wekey-skf.lock";
 
-    LOG_INFO(QString("单例锁路径: %1").arg(lockPath));
-
     lockFile_ = std::make_unique<QLockFile>(lockPath);
-    // 设置 5 秒过期时间，让 Qt 能自动检测并清理已死进程的残留锁文件
-    // （之前设置为 0 表示永不过期，导致 Rosetta 2 下异常退出后无法重新启动）
-    lockFile_->setStaleLockTime(5000);
+    lockFile_->setStaleLockTime(0);  // 不自动删除旧锁
 
     if (lockFile_->tryLock(100)) {
         isPrimary_ = true;
-        LOG_INFO("成功获取单例锁");
         return true;
     }
 
     // 检查锁是否是由已死进程持有
-    qint64 pid = 0;
+    qint64 pid;
     QString hostname;
     QString appname;
 
     if (lockFile_->getLockInfo(&pid, &hostname, &appname)) {
-        LOG_INFO(QString("锁被进程 %1 (%2) 持有，检查进程是否存活").arg(pid).arg(appname));
-
-        // 检查持有锁的进程是否真的还在运行
-        bool processAlive = false;
-#ifdef Q_OS_UNIX
-        // Unix: kill(pid, 0) 返回 0 表示进程存在
-        processAlive = (kill(static_cast<pid_t>(pid), 0) == 0);
-#elif defined(Q_OS_WIN)
-        // Windows: OpenProcess 尝试打开进程句柄
-        HANDLE hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, static_cast<DWORD>(pid));
-        if (hProcess != NULL) {
-            DWORD exitCode = 0;
-            if (GetExitCodeProcess(hProcess, &exitCode) && exitCode == STILL_ACTIVE) {
-                processAlive = true;
-            }
-            CloseHandle(hProcess);
-        }
-#endif
-
-        if (!processAlive) {
-            // 持有锁的进程已死亡（如 Rosetta 2 下异常退出），强制清理
-            LOG_INFO(QString("进程 %1 已不存在，清理残留锁文件").arg(pid));
-            lockFile_->removeStaleLockFile();
-            if (lockFile_->tryLock(100)) {
-                isPrimary_ = true;
-                LOG_INFO("清理残留锁后成功获取单例锁");
-                return true;
-            }
-        } else {
-            LOG_INFO(QString("进程 %1 仍在运行，当前为第二实例").arg(pid));
-            isPrimary_ = false;
-            return false;
-        }
+        // 检查进程是否仍在运行
+        // 这里简化处理，假设锁有效
+        isPrimary_ = false;
+        return false;
     }
 
     // 锁文件损坏或过期，强制删除并重试
-    LOG_INFO("锁文件信息不可读，尝试强制清理");
     lockFile_->removeStaleLockFile();
     if (lockFile_->tryLock(100)) {
         isPrimary_ = true;
-        LOG_INFO("强制清理后成功获取单例锁");
         return true;
     }
 
-    LOG_ERROR("无法获取单例锁");
     isPrimary_ = false;
     return false;
 }
