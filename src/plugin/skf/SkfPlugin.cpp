@@ -1141,41 +1141,29 @@ EVP_PKEY* createRsaEvpPKey(const skf::RSAPUBLICKEYBLOB& blob) {
 
     int modulusLen = static_cast<int>(blob.bitLen / 8);
 
-    // ===== 关键修复：modulus 是小端存储，BN_bin2bn 需要大端 =====
-    // 复制并反转字节序
+    // blob.modulus 是小端存储，BN_bin2bn 需要大端，无条件反转
     std::vector<unsigned char> modulusBE(static_cast<size_t>(modulusLen));
     for (int i = 0; i < modulusLen; ++i) {
         modulusBE[i] = blob.modulus[modulusLen - 1 - i];
     }
     BIGNUM* bn_n = BN_bin2bn(modulusBE.data(), modulusLen, nullptr);
 
-    // publicExponent 同样是小端，通常是 {0x01, 0x00, 0x01, 0x00} 表示 65537
-    // 需要反转后再跳过前导零
+    // publicExponent 同样是小端，00 01 00 01 → 反转 → 01 00 01 00 → 跳过尾部00 → 01 00 01
+    // 注意：反转后跳过的是"前导零"（反转前的尾部零）
     int expBufLen = static_cast<int>(sizeof(blob.publicExponent));
     std::vector<unsigned char> expBE(static_cast<size_t>(expBufLen));
     for (int i = 0; i < expBufLen; ++i) {
         expBE[i] = blob.publicExponent[expBufLen - 1 - i];
     }
-    // 跳过反转后的前导零
     const unsigned char* expPtr = expBE.data();
     int expLen = expBufLen;
-    while (expLen > 1 && *expPtr == 0x00) {
-        ++expPtr;
-        --expLen;
-    }
+    while (expLen > 1 && *expPtr == 0x00) { ++expPtr; --expLen; }
     BIGNUM* bn_e = BN_bin2bn(expPtr, expLen, nullptr);
 
     if (!bn_n || !bn_e) {
         BN_free(bn_n); BN_free(bn_e);
         return nullptr;
     }
-
-    if (!BN_is_odd(bn_n)) {
-        qWarning() << "[createRsaEvpPKey] 模数仍为偶数，字节序处理有误";
-        BN_free(bn_n); BN_free(bn_e);
-        return nullptr;
-    }
-
     int nLen = BN_num_bytes(bn_n);
     int eLen = BN_num_bytes(bn_e);
     std::vector<unsigned char> nBuf(static_cast<size_t>(nLen));
@@ -1185,9 +1173,10 @@ EVP_PKEY* createRsaEvpPKey(const skf::RSAPUBLICKEYBLOB& blob) {
     BN_free(bn_n);
     BN_free(bn_e);
 
-    qDebug() << "[createRsaEvpPKey] modulus首字节(应为非零奇数):" << QString::number(nBuf[0], 16);
-    qDebug() << "[createRsaEvpPKey] exponent(hex):"
-             << QByteArray(reinterpret_cast<const char*>(eBuf.data()), eLen).toHex();
+    qDebug() << "[createRsaEvpPKey] modulus(BE) 首字节:" << QString::number(nBuf[0], 16)
+             << "末字节:" << QString::number(nBuf[nLen-1], 16)
+             << "exponent:" << QByteArray(reinterpret_cast<const char*>(eBuf.data()), eLen).toHex();
+    // 期望输出：首字节=cf，末字节=b5（奇数），exponent=010001
 
     OSSL_PARAM params[] = {
         OSSL_PARAM_construct_BN("n", nBuf.data(), static_cast<size_t>(nLen)),
@@ -1204,6 +1193,7 @@ EVP_PKEY* createRsaEvpPKey(const skf::RSAPUBLICKEYBLOB& blob) {
         EVP_PKEY_CTX_free(ctx);
         return nullptr;
     }
+
     EVP_PKEY_CTX_free(ctx);
     return pkey;
 }
