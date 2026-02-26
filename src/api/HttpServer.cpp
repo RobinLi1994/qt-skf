@@ -12,6 +12,7 @@
 #include <QUrlQuery>
 
 #include "dto/HttpTypes.h"
+#include "log/Logger.h"
 
 namespace wekey {
 namespace api {
@@ -33,9 +34,14 @@ Result<void> HttpServer::start(int port) {
 
     tcpServer_ = new QTcpServer(this);
 
-    // 确保端口独占绑定，防止其他程序复用端口
-    // 注意：在 macOS 上，QTcpServer 默认行为已经是独占的
-    // 但我们显式记录这一点以便调试
+    // 增加最大待处理连接数（默认 30），防止连续请求时连接队列满
+    tcpServer_->setMaxPendingConnections(128);
+
+    // 监听 TCP 接受连接错误，记录日志以便排查
+    connect(tcpServer_, &QTcpServer::acceptError, this, [this](QAbstractSocket::SocketError err) {
+        LOG_ERROR(QString("TCP accept error: %1 (%2)").arg(static_cast<int>(err)).arg(tcpServer_->errorString()));
+    });
+
     if (!tcpServer_->listen(QHostAddress::Any, static_cast<quint16>(port))) {
         QString errorMsg = tcpServer_->errorString();
         delete tcpServer_;
@@ -50,6 +56,7 @@ Result<void> HttpServer::start(int port) {
     running_ = true;
     port_ = port;
 
+    LOG_INFO(QString("HTTP 服务器启动成功, 端口: %1, 最大连接队列: 128").arg(port));
     emit started(port);
     return Result<void>::ok();
 }
@@ -98,45 +105,63 @@ void HttpServer::setRouter(ApiRouter* router) {
             return;
         }
 
-        // Convert QHttpServerRequest to our HttpRequest
-        HttpRequest httpReq;
-        httpReq.path = req.url().path();
-        httpReq.body = QString::fromUtf8(req.body());
+        try {
+            // Convert QHttpServerRequest to our HttpRequest
+            HttpRequest httpReq;
+            httpReq.path = req.url().path();
+            httpReq.body = QString::fromUtf8(req.body());
 
-        // Convert method
-        switch (req.method()) {
-            case QHttpServerRequest::Method::Get: httpReq.method = HttpMethod::GET; break;
-            case QHttpServerRequest::Method::Post: httpReq.method = HttpMethod::POST; break;
-            case QHttpServerRequest::Method::Put: httpReq.method = HttpMethod::PUT; break;
-            case QHttpServerRequest::Method::Delete: httpReq.method = HttpMethod::DELETE; break;
-            case QHttpServerRequest::Method::Patch: httpReq.method = HttpMethod::PATCH; break;
-            case QHttpServerRequest::Method::Head: httpReq.method = HttpMethod::HEAD; break;
-            case QHttpServerRequest::Method::Options: httpReq.method = HttpMethod::OPTIONS; break;
-            default: httpReq.method = HttpMethod::GET; break;
+            // Convert method
+            switch (req.method()) {
+                case QHttpServerRequest::Method::Get: httpReq.method = HttpMethod::GET; break;
+                case QHttpServerRequest::Method::Post: httpReq.method = HttpMethod::POST; break;
+                case QHttpServerRequest::Method::Put: httpReq.method = HttpMethod::PUT; break;
+                case QHttpServerRequest::Method::Delete: httpReq.method = HttpMethod::DELETE; break;
+                case QHttpServerRequest::Method::Patch: httpReq.method = HttpMethod::PATCH; break;
+                case QHttpServerRequest::Method::Head: httpReq.method = HttpMethod::HEAD; break;
+                case QHttpServerRequest::Method::Options: httpReq.method = HttpMethod::OPTIONS; break;
+                default: httpReq.method = HttpMethod::GET; break;
+            }
+
+            // Convert query params
+            QUrlQuery urlQuery(req.url());
+            for (const auto& item : urlQuery.queryItems()) {
+                httpReq.queryParams[item.first] = item.second;
+            }
+
+            // Convert headers
+            auto headers = req.headers();
+            for (qsizetype i = 0; i < headers.size(); ++i) {
+                httpReq.headers[QString(headers.nameAt(i))] =
+                    QString::fromUtf8(headers.valueAt(i));
+            }
+
+            LOG_INFO(QString("HTTP %1 %2").arg(httpMethodToString(httpReq.method), httpReq.path));
+
+            // Route and get response
+            auto httpResp = router_->handleRequest(httpReq);
+
+            // Write response with CORS headers
+            QByteArray body = httpResp.body.toUtf8();
+            corsHeaders.append(QHttpHeaders::WellKnownHeader::ContentType,
+                               "application/json; charset=utf-8");
+            auto status = static_cast<QHttpServerResponder::StatusCode>(httpResp.statusCode);
+            responder.write(body, corsHeaders, status);
+
+        } catch (const std::exception& e) {
+            // 捕获 handler 中的异常，防止导致 QTcpServer 停止监听
+            LOG_ERROR(QString("HTTP handler 异常: %1").arg(e.what()));
+            QByteArray errBody = R"({"code":500,"message":"internal server error","data":null})";
+            corsHeaders.append(QHttpHeaders::WellKnownHeader::ContentType,
+                               "application/json; charset=utf-8");
+            responder.write(errBody, corsHeaders, QHttpServerResponder::StatusCode::InternalServerError);
+        } catch (...) {
+            LOG_ERROR("HTTP handler 未知异常");
+            QByteArray errBody = R"({"code":500,"message":"internal server error","data":null})";
+            corsHeaders.append(QHttpHeaders::WellKnownHeader::ContentType,
+                               "application/json; charset=utf-8");
+            responder.write(errBody, corsHeaders, QHttpServerResponder::StatusCode::InternalServerError);
         }
-
-        // Convert query params
-        QUrlQuery urlQuery(req.url());
-        for (const auto& item : urlQuery.queryItems()) {
-            httpReq.queryParams[item.first] = item.second;
-        }
-
-        // Convert headers
-        auto headers = req.headers();
-        for (qsizetype i = 0; i < headers.size(); ++i) {
-            httpReq.headers[QString(headers.nameAt(i))] =
-                QString::fromUtf8(headers.valueAt(i));
-        }
-
-        // Route and get response
-        auto httpResp = router_->handleRequest(httpReq);
-
-        // Write response with CORS headers
-        QByteArray body = httpResp.body.toUtf8();
-        corsHeaders.append(QHttpHeaders::WellKnownHeader::ContentType,
-                           "application/json; charset=utf-8");
-        auto status = static_cast<QHttpServerResponder::StatusCode>(httpResp.statusCode);
-        responder.write(body, corsHeaders, status);
     });
 }
 
