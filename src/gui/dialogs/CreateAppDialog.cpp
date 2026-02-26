@@ -42,40 +42,68 @@ void CreateAppDialog::setupUi() {
     mainLayout->addWidget(nameEdit_);
     mainLayout->addSpacing(12);
 
-    // ---- 管理员PIN码（必填）----
+    // ---- 管理员PIN码（必填，≥6位）----
     mainLayout->addWidget(createRequiredLabel("管理员PIN码"));
     adminPinEdit_ = new ElaLineEdit(this);
     UiHelper::styleLineEdit(adminPinEdit_);
-    adminPinEdit_->setPlaceholderText("请输入管理员PIN码");
+    adminPinEdit_->setPlaceholderText("请输入管理员PIN码（至少6位）");
     adminPinEdit_->setEchoMode(QLineEdit::Password);
     connect(adminPinEdit_, &ElaLineEdit::textChanged, this, &CreateAppDialog::validate);
     mainLayout->addWidget(adminPinEdit_);
+    adminPinHint_ = createHintLabel("PIN码至少需要6位");
+    mainLayout->addWidget(adminPinHint_);
+    mainLayout->addSpacing(8);
+
+    // ---- 管理员PIN码确认（必填）----
+    mainLayout->addWidget(createRequiredLabel("确认管理员PIN码"));
+    adminPinConfirmEdit_ = new ElaLineEdit(this);
+    UiHelper::styleLineEdit(adminPinConfirmEdit_);
+    adminPinConfirmEdit_->setPlaceholderText("请再次输入管理员PIN码");
+    adminPinConfirmEdit_->setEchoMode(QLineEdit::Password);
+    connect(adminPinConfirmEdit_, &ElaLineEdit::textChanged, this, &CreateAppDialog::validate);
+    mainLayout->addWidget(adminPinConfirmEdit_);
+    adminPinConfirmHint_ = createHintLabel("两次输入的PIN码不一致");
+    mainLayout->addWidget(adminPinConfirmHint_);
     mainLayout->addSpacing(12);
 
     // ---- 管理员重试次数（必填）----
     mainLayout->addWidget(createRequiredLabel("管理员重试次数"));
     adminRetrySpin_ = new ElaSpinBox(this);
-    adminRetrySpin_->setRange(1, 10);
-    adminRetrySpin_->setValue(3);
+    adminRetrySpin_->setRange(1, 99);
+    adminRetrySpin_->setValue(15);
     adminRetrySpin_->setFixedHeight(36);
     mainLayout->addWidget(adminRetrySpin_);
     mainLayout->addSpacing(12);
 
-    // ---- 用户PIN码（必填）----
+    // ---- 用户PIN码（必填，≥6位）----
     mainLayout->addWidget(createRequiredLabel("用户PIN码"));
     userPinEdit_ = new ElaLineEdit(this);
     UiHelper::styleLineEdit(userPinEdit_);
-    userPinEdit_->setPlaceholderText("请输入用户PIN码");
+    userPinEdit_->setPlaceholderText("请输入用户PIN码（至少6位）");
     userPinEdit_->setEchoMode(QLineEdit::Password);
     connect(userPinEdit_, &ElaLineEdit::textChanged, this, &CreateAppDialog::validate);
     mainLayout->addWidget(userPinEdit_);
+    userPinHint_ = createHintLabel("PIN码至少需要6位");
+    mainLayout->addWidget(userPinHint_);
+    mainLayout->addSpacing(8);
+
+    // ---- 用户PIN码确认（必填）----
+    mainLayout->addWidget(createRequiredLabel("确认用户PIN码"));
+    userPinConfirmEdit_ = new ElaLineEdit(this);
+    UiHelper::styleLineEdit(userPinConfirmEdit_);
+    userPinConfirmEdit_->setPlaceholderText("请再次输入用户PIN码");
+    userPinConfirmEdit_->setEchoMode(QLineEdit::Password);
+    connect(userPinConfirmEdit_, &ElaLineEdit::textChanged, this, &CreateAppDialog::validate);
+    mainLayout->addWidget(userPinConfirmEdit_);
+    userPinConfirmHint_ = createHintLabel("两次输入的PIN码不一致");
+    mainLayout->addWidget(userPinConfirmHint_);
     mainLayout->addSpacing(12);
 
     // ---- 用户重试次数（必填）----
     mainLayout->addWidget(createRequiredLabel("用户重试次数"));
     userRetrySpin_ = new ElaSpinBox(this);
-    userRetrySpin_->setRange(1, 10);
-    userRetrySpin_->setValue(3);
+    userRetrySpin_->setRange(1, 99);
+    userRetrySpin_->setValue(15);
     userRetrySpin_->setFixedHeight(36);
     mainLayout->addWidget(userRetrySpin_);
     mainLayout->addSpacing(16);
@@ -111,10 +139,40 @@ QLabel* CreateAppDialog::createRequiredLabel(const QString& text) {
     return label;
 }
 
+QLabel* CreateAppDialog::createHintLabel(const QString& text) {
+    auto* label = new QLabel(text, this);
+    label->setStyleSheet("color: #ff4d4f; font-size: 12px;");
+    label->setVisible(false);
+    return label;
+}
+
 void CreateAppDialog::validate() {
+    const QString adminPin        = adminPinEdit_->text();
+    const QString adminPinConfirm = adminPinConfirmEdit_->text();
+    const QString userPin         = userPinEdit_->text();
+    const QString userPinConfirm  = userPinConfirmEdit_->text();
+
+    // 管理员PIN长度提示：已有输入但不足6位时显示
+    const bool adminPinTooShort = !adminPin.isEmpty() && adminPin.length() < 6;
+    adminPinHint_->setVisible(adminPinTooShort);
+
+    // 管理员PIN确认不一致提示：两框均非空且不匹配时显示
+    const bool adminPinMismatch = !adminPinConfirm.isEmpty() && adminPin != adminPinConfirm;
+    adminPinConfirmHint_->setVisible(adminPinMismatch);
+
+    // 用户PIN长度提示
+    const bool userPinTooShort = !userPin.isEmpty() && userPin.length() < 6;
+    userPinHint_->setVisible(userPinTooShort);
+
+    // 用户PIN确认不一致提示
+    const bool userPinMismatch = !userPinConfirm.isEmpty() && userPin != userPinConfirm;
+    userPinConfirmHint_->setVisible(userPinMismatch);
+
     bool valid = !nameEdit_->text().trimmed().isEmpty()
-              && !adminPinEdit_->text().isEmpty()
-              && !userPinEdit_->text().isEmpty();
+              && adminPin.length() >= 6
+              && adminPin == adminPinConfirm
+              && userPin.length() >= 6
+              && userPin == userPinConfirm;
     okButton_->setEnabled(valid);
 }
 

@@ -22,6 +22,9 @@ public:
     QSystemTrayIcon* trayIcon() const;
     ElaMenu* trayMenu() const;
 
+    /// @brief 重新注册托盘图标（用于 Windows Explorer 重启后恢复）
+    void reinstall();
+
 signals:
     void showRequested();
     void exitRequested();

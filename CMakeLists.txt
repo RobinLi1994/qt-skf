@@ -4,9 +4,9 @@
 cmake_minimum_required(VERSION 3.20)
 
 project(wekey-skf
-    VERSION 1.0.0
-    DESCRIPTION "TrustAsia SKF Device Management Tool"
-    LANGUAGES CXX
+        VERSION 1.0.0
+        DESCRIPTION "TrustAsia SKF Device Management Tool"
+        LANGUAGES CXX
 )
 
 # ==============================================================================
@@ -54,11 +54,11 @@ endif()
 set(QT_NO_PRIVATE_MODULE_WARNING ON CACHE BOOL "Suppress Qt private module ABI warning")
 
 find_package(Qt6 REQUIRED COMPONENTS
-    Core
-    Widgets
-    WidgetsPrivate
-    Network
-    HttpServer
+        Core
+        Widgets
+        WidgetsPrivate
+        Network
+        HttpServer
 )
 
 if(ENABLE_TESTING)
@@ -88,10 +88,10 @@ include(FetchContent)
 cmake_policy(SET CMP0169 OLD)
 
 FetchContent_Declare(
-    ElaWidgetTools
-    GIT_REPOSITORY https://github.com/Liniyous/ElaWidgetTools.git
-    GIT_TAG        6d46c5a4fd95cc2ad76099f849e3fe2465dff5a3
-    GIT_SHALLOW    FALSE  # 使用 commit hash 需要完整克隆
+        ElaWidgetTools
+        GIT_REPOSITORY https://github.com/Liniyous/ElaWidgetTools.git
+        GIT_TAG        6d46c5a4fd95cc2ad76099f849e3fe2465dff5a3
+        GIT_SHALLOW    FALSE  # 使用 commit hash 需要完整克隆
 )
 
 # 构建为静态库，避免运行时需要分发动态库
@@ -116,15 +116,15 @@ if(NOT elawidgettools_POPULATED)
     endif()
 
     add_subdirectory(
-        ${elawidgettools_SOURCE_DIR}/ElaWidgetTools
-        ${elawidgettools_BINARY_DIR}/ElaWidgetTools
+            ${elawidgettools_SOURCE_DIR}/ElaWidgetTools
+            ${elawidgettools_BINARY_DIR}/ElaWidgetTools
     )
 
     # 对 ElaWidgetTools 目标关闭 -Werror 和 /WX，避免第三方代码警告导致编译失败
     if(TARGET ElaWidgetTools)
         target_compile_options(ElaWidgetTools PRIVATE
-            $<$<CXX_COMPILER_ID:MSVC>:/W3 /WX->
-            $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wno-error>
+                $<$<CXX_COMPILER_ID:MSVC>:/W3 /WX->
+                $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wno-error>
         )
     endif()
 endif()

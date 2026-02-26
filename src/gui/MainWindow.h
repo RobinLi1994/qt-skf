@@ -24,9 +24,14 @@ public:
 
 protected:
     void closeEvent(QCloseEvent* event) override;
+#ifdef Q_OS_WIN
+    bool nativeEvent(const QByteArray& eventType, void* message, qintptr* result) override;
+#endif
 
 private:
     void setupNavigation();
+    /// @brief 将窗口显示并带到前台（跨平台）
+    void showWindow();
 
     SystemTray* systemTray_ = nullptr;
     ElaContentDialog* closeDialog_ = nullptr;

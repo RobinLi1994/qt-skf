@@ -12,6 +12,7 @@
 #include <QHBoxLayout>
 #include <QMouseEvent>
 #include <QHeaderView>
+#include <QRegularExpression>
 #include <QVBoxLayout>
 
 #include <ElaContentDialog.h>
@@ -262,27 +263,38 @@ void AppListView::onLogout(const QString& appName) {
 void AppListView::onChangePin(const QString& appName) {
     auto* dialog = new QDialog(this);
     dialog->setWindowTitle(QString("编辑应用 %1 的PIN码").arg(appName));
-    dialog->resize(420, 0);
+    dialog->resize(440, 0);
     UiHelper::styleDialog(dialog);
 
     auto* mainLayout = new QVBoxLayout(dialog);
     mainLayout->setContentsMargins(24, 24, 24, 24);
     mainLayout->setSpacing(4);
 
-    // ---- 角色选择（必填）----
-    auto* roleLabel = new QLabel(dialog);
-    roleLabel->setTextFormat(Qt::RichText);
-    roleLabel->setText(
-        "<span style='color:#ff4d4f; font-size:14px;'>* </span>"
-        "<span style='color:#000000; font-size:14px;'>角色</span>");
-    mainLayout->addWidget(roleLabel);
+    // 辅助：创建必填标签
+    auto makeRequired = [&](const QString& text) {
+        auto* lbl = new QLabel(dialog);
+        lbl->setTextFormat(Qt::RichText);
+        lbl->setText(
+            QString("<span style='color:#ff4d4f; font-size:14px;'>* </span>"
+                    "<span style='color:#000000; font-size:14px;'>%1</span>").arg(text));
+        return lbl;
+    };
+    // 辅助：创建红色错误提示标签（初始隐藏）
+    auto makeHint = [&](const QString& text) {
+        auto* lbl = new QLabel(text, dialog);
+        lbl->setStyleSheet("color: #ff4d4f; font-size: 12px;");
+        lbl->setVisible(false);
+        return lbl;
+    };
 
+    // ---- 角色选择 ----
+    mainLayout->addWidget(makeRequired("角色"));
     auto* roleLayout = new QHBoxLayout;
     roleLayout->setContentsMargins(0, 0, 0, 0);
     roleLayout->setSpacing(16);
     auto* adminRadio = new ElaRadioButton("管理员", dialog);
-    auto* userRadio = new ElaRadioButton("用户", dialog);
-    auto* roleGroup = new QButtonGroup(dialog);
+    auto* userRadio  = new ElaRadioButton("用户", dialog);
+    auto* roleGroup  = new QButtonGroup(dialog);
     roleGroup->addButton(adminRadio);
     roleGroup->addButton(userRadio);
     userRadio->setChecked(true);
@@ -292,14 +304,8 @@ void AppListView::onChangePin(const QString& appName) {
     mainLayout->addLayout(roleLayout);
     mainLayout->addSpacing(12);
 
-    // ---- 原PIN码（必填）----
-    auto* oldPinLabel = new QLabel(dialog);
-    oldPinLabel->setTextFormat(Qt::RichText);
-    oldPinLabel->setText(
-        "<span style='color:#ff4d4f; font-size:14px;'>* </span>"
-        "<span style='color:#000000; font-size:14px;'>原PIN码</span>");
-    mainLayout->addWidget(oldPinLabel);
-
+    // ---- 原PIN码 ----
+    mainLayout->addWidget(makeRequired("原PIN码"));
     auto* oldPinEdit = new ElaLineEdit(dialog);
     UiHelper::styleLineEdit(oldPinEdit);
     oldPinEdit->setEchoMode(QLineEdit::Password);
@@ -307,19 +313,29 @@ void AppListView::onChangePin(const QString& appName) {
     mainLayout->addWidget(oldPinEdit);
     mainLayout->addSpacing(12);
 
-    // ---- 新PIN码（必填）----
-    auto* newPinLabel = new QLabel(dialog);
-    newPinLabel->setTextFormat(Qt::RichText);
-    newPinLabel->setText(
-        "<span style='color:#ff4d4f; font-size:14px;'>* </span>"
-        "<span style='color:#000000; font-size:14px;'>新PIN码</span>");
-    mainLayout->addWidget(newPinLabel);
-
+    // ---- 新PIN码 ----
+    mainLayout->addWidget(makeRequired("新PIN码"));
     auto* newPinEdit = new ElaLineEdit(dialog);
     UiHelper::styleLineEdit(newPinEdit);
     newPinEdit->setEchoMode(QLineEdit::Password);
-    newPinEdit->setPlaceholderText("请输入新PIN码");
+    newPinEdit->setPlaceholderText("至少8位，含大小写字母、数字、特殊字符");
     mainLayout->addWidget(newPinEdit);
+
+    // 强度提示（四项）
+    auto* strengthHint = makeHint("");
+    mainLayout->addWidget(strengthHint);
+    mainLayout->addSpacing(8);
+
+    // ---- 确认新PIN码 ----
+    mainLayout->addWidget(makeRequired("确认新PIN码"));
+    auto* confirmPinEdit = new ElaLineEdit(dialog);
+    UiHelper::styleLineEdit(confirmPinEdit);
+    confirmPinEdit->setEchoMode(QLineEdit::Password);
+    confirmPinEdit->setPlaceholderText("请再次输入新PIN码");
+    mainLayout->addWidget(confirmPinEdit);
+
+    auto* confirmHint = makeHint("两次输入的PIN码不一致");
+    mainLayout->addWidget(confirmHint);
     mainLayout->addSpacing(16);
 
     // ---- 分隔线 ----
@@ -332,7 +348,6 @@ void AppListView::onChangePin(const QString& appName) {
     UiHelper::styleDefaultButton(cancelBtn);
     connect(cancelBtn, &ElaPushButton::clicked, dialog, &QDialog::reject);
     btnLayout->addWidget(cancelBtn);
-
     auto* okBtn = new ElaPushButton("确定", dialog);
     UiHelper::stylePrimaryButton(okBtn);
     okBtn->setEnabled(false);
@@ -340,19 +355,53 @@ void AppListView::onChangePin(const QString& appName) {
     btnLayout->addWidget(okBtn);
     mainLayout->addLayout(btnLayout);
 
-    // 输入内容变化时启用/禁用确定按钮
-    auto validateInputs = [okBtn, oldPinEdit, newPinEdit]() {
-        okBtn->setEnabled(!oldPinEdit->text().isEmpty() && !newPinEdit->text().isEmpty());
+    // ---- 实时校验 ----
+    auto validateInputs = [=]() {
+        const QString newPin     = newPinEdit->text();
+        const QString confirmPin = confirmPinEdit->text();
+
+        // 密码强度检查
+        bool hasUpper   = newPin.contains(QRegularExpression("[A-Z]"));
+        bool hasLower   = newPin.contains(QRegularExpression("[a-z]"));
+        bool hasDigit   = newPin.contains(QRegularExpression("[0-9]"));
+        bool hasSpecial = newPin.contains(QRegularExpression("[^A-Za-z0-9]"));
+        bool longEnough = newPin.length() >= 8;
+
+        QStringList missing;
+        if (!longEnough) missing << "至少8位";
+        if (!hasUpper)   missing << "大写字母";
+        if (!hasLower)   missing << "小写字母";
+        if (!hasDigit)   missing << "数字";
+        if (!hasSpecial) missing << "特殊字符";
+
+        bool strengthOk = missing.isEmpty();
+        if (!newPin.isEmpty() && !strengthOk) {
+            strengthHint->setText("缺少：" + missing.join("、"));
+            strengthHint->setVisible(true);
+        } else {
+            strengthHint->setVisible(false);
+        }
+
+        // 确认码一致性检查
+        confirmHint->setVisible(!confirmPin.isEmpty() && newPin != confirmPin);
+
+        bool valid = !oldPinEdit->text().isEmpty()
+                  && strengthOk
+                  && !confirmPin.isEmpty()
+                  && newPin == confirmPin;
+        okBtn->setEnabled(valid);
     };
-    connect(oldPinEdit, &ElaLineEdit::textChanged, dialog, validateInputs);
-    connect(newPinEdit, &ElaLineEdit::textChanged, dialog, validateInputs);
+
+    connect(oldPinEdit,    &ElaLineEdit::textChanged, dialog, validateInputs);
+    connect(newPinEdit,    &ElaLineEdit::textChanged, dialog, validateInputs);
+    connect(confirmPinEdit, &ElaLineEdit::textChanged, dialog, validateInputs);
 
     if (dialog->exec() != QDialog::Accepted) {
         dialog->deleteLater();
         return;
     }
 
-    QString role = adminRadio->isChecked() ? "admin" : "user";
+    QString role   = adminRadio->isChecked() ? "admin" : "user";
     QString oldPin = oldPinEdit->text();
     QString newPin = newPinEdit->text();
     dialog->deleteLater();

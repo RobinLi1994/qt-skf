@@ -32,6 +32,11 @@ QSystemTrayIcon* SystemTray::trayIcon() const { return trayIcon_; }
 
 ElaMenu* SystemTray::trayMenu() const { return trayMenu_; }
 
+void SystemTray::reinstall() {
+    trayIcon_->hide();
+    trayIcon_->show();
+}
+
 void SystemTray::setupMenu() {
     trayMenu_ = new ElaMenu;
 

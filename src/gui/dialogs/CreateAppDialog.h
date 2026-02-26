@@ -45,12 +45,20 @@ private:
 
     /// @brief 创建带红色星号的必填标签行
     QLabel* createRequiredLabel(const QString& text);
+    /// @brief 创建红色错误提示标签（初始隐藏）
+    QLabel* createHintLabel(const QString& text);
 
-    ElaLineEdit* nameEdit_ = nullptr;        ///< 应用名称
-    ElaLineEdit* adminPinEdit_ = nullptr;    ///< 管理员PIN码
-    ElaSpinBox* adminRetrySpin_ = nullptr;   ///< 管理员重试次数
-    ElaLineEdit* userPinEdit_ = nullptr;     ///< 用户PIN码
-    ElaSpinBox* userRetrySpin_ = nullptr;    ///< 用户重试次数
+    ElaLineEdit* nameEdit_ = nullptr;             ///< 应用名称
+    ElaLineEdit* adminPinEdit_ = nullptr;         ///< 管理员PIN码
+    QLabel* adminPinHint_ = nullptr;              ///< 管理员PIN码长度错误提示
+    ElaLineEdit* adminPinConfirmEdit_ = nullptr;  ///< 管理员PIN码确认
+    QLabel* adminPinConfirmHint_ = nullptr;       ///< 管理员PIN码确认不一致提示
+    ElaSpinBox* adminRetrySpin_ = nullptr;        ///< 管理员重试次数
+    ElaLineEdit* userPinEdit_ = nullptr;          ///< 用户PIN码
+    QLabel* userPinHint_ = nullptr;               ///< 用户PIN码长度错误提示
+    ElaLineEdit* userPinConfirmEdit_ = nullptr;   ///< 用户PIN码确认
+    QLabel* userPinConfirmHint_ = nullptr;        ///< 用户PIN码确认不一致提示
+    ElaSpinBox* userRetrySpin_ = nullptr;         ///< 用户重试次数
     ElaPushButton* okButton_ = nullptr;      ///< 确定按钮
     ElaPushButton* cancelButton_ = nullptr;  ///< 取消按钮
 };

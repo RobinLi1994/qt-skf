@@ -360,48 +360,93 @@ Result<QList<DeviceInfo>> SkfPlugin::enumDevices(bool /*login*/) {
             Error(Error::PluginLoadFailed, "SKF library not loaded", "SkfPlugin::enumDevices"));
     }
 
-    // 第一次调用获取缓冲区大小
-    skf::ULONG size = 0;
-    skf::ULONG ret = lib_->EnumDev(1, nullptr, &size);
+    // 先用预分配缓冲区尝试一次调用获取设备列表，避免双次 EnumDev（减少 USB 扫描开销）
+    skf::ULONG size = 4096;
+    QByteArray buffer(static_cast<int>(size), '\0');
+    skf::ULONG ret = lib_->EnumDev(1, buffer.data(), &size);
     if (ret != skf::SAR_OK) {
-        return Result<QList<DeviceInfo>>::err(Error::fromSkf(ret, "SKF_EnumDev"));
+        // 缓冲区不够，回退到双次调用
+        size = 0;
+        ret = lib_->EnumDev(1, nullptr, &size);
+        if (ret != skf::SAR_OK) {
+            return Result<QList<DeviceInfo>>::err(Error::fromSkf(ret, "SKF_EnumDev"));
+        }
+        if (size == 0) {
+            devInfoCache_.clear();
+            return Result<QList<DeviceInfo>>::ok({});
+        }
+        buffer.resize(static_cast<int>(size));
+        buffer.fill('\0');
+        ret = lib_->EnumDev(1, buffer.data(), &size);
+        if (ret != skf::SAR_OK) {
+            return Result<QList<DeviceInfo>>::err(Error::fromSkf(ret, "SKF_EnumDev"));
+        }
     }
 
     if (size == 0) {
+        devInfoCache_.clear();
         return Result<QList<DeviceInfo>>::ok({});
     }
 
-    // 第二次调用获取设备列表
-    QByteArray buffer(static_cast<int>(size), '\0');
-    ret = lib_->EnumDev(1, buffer.data(), &size);
-    if (ret != skf::SAR_OK) {
-        return Result<QList<DeviceInfo>>::err(Error::fromSkf(ret, "SKF_EnumDev"));
+    QStringList devNames = parseNameList(buffer.constData(), size);
+    QSet<QString> currentDevs(devNames.begin(), devNames.end());
+
+    // 清理已拔出设备的缓存
+    for (auto it = devInfoCache_.begin(); it != devInfoCache_.end(); ) {
+        if (!currentDevs.contains(it.key())) {
+            it = devInfoCache_.erase(it);
+        } else {
+            ++it;
+        }
     }
 
-    QStringList devNames = parseNameList(buffer.constData(), size);
     QList<DeviceInfo> devices;
 
     for (const auto& name : devNames) {
+        // 优先使用缓存的设备信息，避免重复 ConnectDev/DisConnectDev
+        if (devInfoCache_.contains(name)) {
+            DeviceInfo info = devInfoCache_[name];
+            // 刷新登录状态（可能在两次枚举之间变化）
+            info.isLoggedIn = false;
+            if (!info.serialNumber.isEmpty()) {
+                for (const auto& cacheKey : loginCache_.keys()) {
+                    if (cacheKey.startsWith(info.serialNumber + "/")) {
+                        info.isLoggedIn = true;
+                        break;
+                    }
+                }
+            }
+            devices.append(info);
+            continue;
+        }
+
         DeviceInfo info;
         info.deviceName = name;
 
-        // 尝试获取设备详细信息
-        auto devResult = openDevice(name);
-        if (devResult.isOk() && lib_->GetDevInfo) {
-            skf::DEVINFO devInfo;
-            std::memset(&devInfo, 0, sizeof(devInfo));
-            ret = lib_->GetDevInfo(devResult.value(), &devInfo);
-            if (ret == skf::SAR_OK) {
-                info.manufacturer = QString::fromLocal8Bit(devInfo.manufacturer);
-                info.label = QString::fromLocal8Bit(devInfo.label);
-                info.serialNumber = QString::fromLocal8Bit(devInfo.serialNumber);
-                info.hardwareVersion =
-                    QString("%1.%2").arg(devInfo.hwVersion.major).arg(devInfo.hwVersion.minor);
-                info.firmwareVersion =
-                    QString("%1.%2").arg(devInfo.firmwareVersion.major).arg(devInfo.firmwareVersion.minor);
+        // 首次发现的设备：调用 ConnectDev/GetDevInfo/DisConnectDev 获取信息
+        if (lib_->ConnectDev && lib_->GetDevInfo && lib_->DisConnectDev) {
+            skf::DEVHANDLE hDev = nullptr;
+            QByteArray nameBytes = name.toLocal8Bit();
+            ret = lib_->ConnectDev(nameBytes.constData(), &hDev);
+            if (ret == skf::SAR_OK && hDev) {
+                skf::DEVINFO devInfo;
+                std::memset(&devInfo, 0, sizeof(devInfo));
+                ret = lib_->GetDevInfo(hDev, &devInfo);
+                if (ret == skf::SAR_OK) {
+                    info.manufacturer = QString::fromLocal8Bit(devInfo.manufacturer);
+                    info.label = QString::fromLocal8Bit(devInfo.label);
+                    info.serialNumber = QString::fromLocal8Bit(devInfo.serialNumber);
+                    info.hardwareVersion =
+                        QString("%1.%2").arg(devInfo.hwVersion.major).arg(devInfo.hwVersion.minor);
+                    info.firmwareVersion =
+                        QString("%1.%2").arg(devInfo.firmwareVersion.major).arg(devInfo.firmwareVersion.minor);
+                }
+                lib_->DisConnectDev(hDev);
             }
-            closeDevice(name);
         }
+
+        // 缓存设备信息
+        devInfoCache_[name] = info;
 
         // 从独立的登录缓存中检查是否有已登录的应用
         if (!info.serialNumber.isEmpty()) {
@@ -475,6 +520,9 @@ Result<void> SkfPlugin::setDeviceLabel(const QString& devName, const QString& la
     if (ret != skf::SAR_OK) {
         return Result<void>::err(Error::fromSkf(ret, "SKF_SetLabel"));
     }
+
+    // 标签已变更，清除缓存以便下次枚举时重新获取
+    devInfoCache_.remove(devName);
 
     return Result<void>::ok();
 }

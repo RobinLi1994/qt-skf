@@ -236,6 +236,7 @@ private:
     std::unique_ptr<SkfLibrary> lib_;  ///< SKF 库实例
     QMap<QString, HandleInfo> handles_;  ///< 句柄映射表
     QMap<QString, LoginInfo> loginCache_;  ///< 登录凭据缓存，key = "devName/appName"
+    QMap<QString, DeviceInfo> devInfoCache_;  ///< 设备信息缓存，key = deviceName
     mutable QMutex mutex_;  ///< 线程安全互斥锁
 };
 

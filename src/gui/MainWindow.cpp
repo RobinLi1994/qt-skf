@@ -7,9 +7,16 @@
 
 #include <QApplication>
 #include <QCloseEvent>
+#include <QGuiApplication>
 #include <QHBoxLayout>
 #include <QIcon>
 #include <QLabel>
+
+#ifdef Q_OS_WIN
+#include <windows.h>
+// Explorer 重启后重新广播此消息，托盘图标需要重新注册
+static const UINT kWmTaskbarCreated = ::RegisterWindowMessage(L"TaskbarCreated");
+#endif
 
 #include <ElaContentDialog.h>
 #include <ElaStatusBar.h>
@@ -78,12 +85,28 @@ MainWindow::MainWindow(QWidget* parent) : ElaWindow(parent) {
     // 系统托盘
     if (!Config::instance().systrayDisabled()) {
         systemTray_ = new SystemTray(this);
-        connect(systemTray_, &SystemTray::showRequested, this, &QWidget::show);
+        // 修复：show() 后调用 raise()+activateWindow() 才能在 macOS 上真正浮到前台
+        connect(systemTray_, &SystemTray::showRequested, this, &MainWindow::showWindow);
         connect(systemTray_, &SystemTray::exitRequested, qApp, &QApplication::quit);
+
+        // 修复 macOS：Dock 图标点击会触发 ApplicationActive，此时若窗口隐藏则重新显示
+#ifdef Q_OS_MAC
+        connect(qApp, &QGuiApplication::applicationStateChanged, this,
+                [this](Qt::ApplicationState state) {
+                    if (state == Qt::ApplicationActive && !isVisible()) {
+                        showWindow();
+                    }
+                });
+#endif
+
         // 有托盘时，关闭按钮隐藏到托盘
         setIsDefaultClosed(false);
         connect(this, &MainWindow::closeButtonClicked, this, [this]() {
             hide();
+            // 修复 Windows：hide() 可能导致托盘图标丢失，立即重新注册
+#ifdef Q_OS_WIN
+            systemTray_->reinstall();
+#endif
         });
     } else {
         // 无托盘时，关闭按钮弹出确认对话框
@@ -98,15 +121,36 @@ MainWindow::MainWindow(QWidget* parent) : ElaWindow(parent) {
 
 void MainWindow::closeEvent(QCloseEvent* event) {
     // ElaWindow 通过 closeButtonClicked 信号处理关闭逻辑
-    // 此处仅处理系统级关闭事件（如 Alt+F4）
+    // 此处仅处理系统级关闭事件（如 Alt+F4 / macOS Cmd+Q）
     if (systemTray_ != nullptr) {
         hide();
         event->ignore();
+#ifdef Q_OS_WIN
+        systemTray_->reinstall();
+#endif
     } else {
         event->ignore();
         closeDialog_->exec();
     }
 }
+
+void MainWindow::showWindow() {
+    show();
+    raise();
+    activateWindow();
+}
+
+#ifdef Q_OS_WIN
+bool MainWindow::nativeEvent(const QByteArray& eventType, void* message, qintptr* result) {
+    // 修复 Windows：Explorer 重启后（如系统更新）托盘图标会丢失，
+    // TaskbarCreated 消息通知所有程序重新注册托盘图标
+    const MSG* msg = static_cast<const MSG*>(message);
+    if (msg->message == kWmTaskbarCreated && systemTray_) {
+        systemTray_->reinstall();
+    }
+    return ElaWindow::nativeEvent(eventType, message, result);
+}
+#endif
 
 void MainWindow::setupNavigation() {
     // 使用 ElaWindow 内置导航栏添加页面节点
