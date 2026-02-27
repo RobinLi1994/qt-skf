@@ -20,7 +20,7 @@ Result<QList<ContainerInfo>> ContainerService::enumContainers(const QString& dev
     auto* plugin = PluginManager::instance().activePlugin();
     if (!plugin) {
         return Result<QList<ContainerInfo>>::err(
-            Error(Error::NoActiveModule, "No active plugin", "ContainerService::enumContainers"));
+            Error(Error::NoActiveModule, "驱动模块未激活", "ContainerService::enumContainers"));
     }
     return plugin->enumContainers(devName, appName);
 }
@@ -30,7 +30,7 @@ Result<void> ContainerService::createContainer(const QString& devName, const QSt
     auto* plugin = PluginManager::instance().activePlugin();
     if (!plugin) {
         return Result<void>::err(
-            Error(Error::NoActiveModule, "No active plugin", "ContainerService::createContainer"));
+            Error(Error::NoActiveModule, "驱动模块未激活", "ContainerService::createContainer"));
     }
     return plugin->createContainer(devName, appName, containerName);
 }
@@ -40,7 +40,7 @@ Result<void> ContainerService::deleteContainer(const QString& devName, const QSt
     auto* plugin = PluginManager::instance().activePlugin();
     if (!plugin) {
         return Result<void>::err(
-            Error(Error::NoActiveModule, "No active plugin", "ContainerService::deleteContainer"));
+            Error(Error::NoActiveModule, "驱动模块未激活", "ContainerService::deleteContainer"));
     }
     return plugin->deleteContainer(devName, appName, containerName);
 }

@@ -15,7 +15,7 @@ namespace api {
 static Result<void> requireNonEmpty(const QString& value, const QString& field, const QString& context) {
     if (value.isEmpty()) {
         return Result<void>::err(
-            Error(Error::InvalidParam, QString("field '%1' must not be empty").arg(field), context));
+            Error(Error::InvalidParam, QString("字段 '%1' 不能为空").arg(field), context));
     }
     return Result<void>::ok();
 }
@@ -23,7 +23,7 @@ static Result<void> requireNonEmpty(const QString& value, const QString& field, 
 static Result<void> requireJsonField(const QJsonObject& json, const QString& field) {
     if (!json.contains(field) || json[field].toString().isEmpty()) {
         return Result<void>::err(
-            Error(Error::InvalidParam, QString("missing required field: %1").arg(field), "fromJson"));
+            Error(Error::InvalidParam, QString("缺少必填字段：%1").arg(field), "fromJson"));
     }
     return Result<void>::ok();
 }
@@ -31,7 +31,7 @@ static Result<void> requireJsonField(const QJsonObject& json, const QString& fie
 static Result<void> requireQueryField(const QMap<QString, QString>& query, const QString& field) {
     if (!query.contains(field) || query.value(field).isEmpty()) {
         return Result<void>::err(
-            Error(Error::InvalidParam, QString("missing required field: %1").arg(field), "fromQuery"));
+            Error(Error::InvalidParam, QString("缺少必填字段：%1").arg(field), "fromQuery"));
     }
     return Result<void>::ok();
 }
@@ -64,7 +64,7 @@ Result<void> LoginRequest::validate() const {
     // 但如果 role 不为空，必须是合法值
     if (!role.isEmpty() && role != "user" && role != "admin") {
         return Result<void>::err(
-            Error(Error::InvalidParam, "role must be 'user' or 'admin'", "LoginRequest::validate"));
+            Error(Error::InvalidParam, "role 必须为 'user' 或 'admin'", "LoginRequest::validate"));
     }
 
     return requireNonEmpty(pin, "pin", "LoginRequest::validate");
@@ -154,7 +154,7 @@ Result<void> ImportCertRequest::validate() const {
     // sigCert、encCert、encPrivate 至少提供一个
     if (sigCert.isEmpty() && encCert.isEmpty() && encPrivate.isEmpty()) {
         return Result<void>::err(
-            Error(Error::InvalidParam, "at least one of sigCert, encCert, encPrivate must be provided",
+            Error(Error::InvalidParam, "sigCert、encCert、encPrivate 至少需要提供一个",
                   "ImportCertRequest::validate"));
     }
     return Result<void>::ok();
@@ -249,7 +249,7 @@ Result<void> RandomRequest::validate() const {
     // count <= 0 时使用默认值，不需要校验
     if (count > MAX_RANDOM_LENGTH) {
         return Result<void>::err(
-            Error(Error::InvalidParam, "count must be <= 4096", "RandomRequest::validate"));
+            Error(Error::InvalidParam, "count 不能超过 4096", "RandomRequest::validate"));
     }
     return Result<void>::ok();
 }
@@ -399,7 +399,7 @@ Result<void> UpdateAppPinRequest::validate() const {
     if (r.isErr()) return r;
     if (role != "user" && role != "admin") {
         return Result<void>::err(
-            Error(Error::InvalidParam, "role must be 'user' or 'admin'", "UpdateAppPinRequest::validate"));
+            Error(Error::InvalidParam, "role 必须为 'user' 或 'admin'", "UpdateAppPinRequest::validate"));
     }
     r = requireNonEmpty(oldPin, "oldPin", "UpdateAppPinRequest::validate");
     if (r.isErr()) return r;
@@ -488,7 +488,7 @@ Result<void> CreateFileRequest::validate() const {
     if (r.isErr()) return r;
     if (size <= 0) {
         return Result<void>::err(
-            Error(Error::InvalidParam, "size must be positive", "CreateFileRequest::validate"));
+            Error(Error::InvalidParam, "size 必须大于 0", "CreateFileRequest::validate"));
     }
     return Result<void>::ok();
 }

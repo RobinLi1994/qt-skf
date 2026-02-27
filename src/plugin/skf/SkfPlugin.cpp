@@ -53,7 +53,7 @@ Result<void> SkfPlugin::initialize(const QString& libPath) {
         auto errMsg = lib_->errorString();
         lib_.reset();
         return Result<void>::err(
-            Error(Error::PluginLoadFailed, "SKF library load failed: " + errMsg, "SkfPlugin::initialize"));
+            Error(Error::PluginLoadFailed, "SKF 库加载失败：" + errMsg, "SkfPlugin::initialize"));
     }
 
     return Result<void>::ok();
@@ -102,7 +102,7 @@ Result<skf::DEVHANDLE> SkfPlugin::openDevice(const QString& devName) {
 
     if (!lib_ || !lib_->ConnectDev) {
         return Result<skf::DEVHANDLE>::err(
-            Error(Error::PluginLoadFailed, "SKF library not loaded", "SkfPlugin::openDevice"));
+            Error(Error::PluginLoadFailed, "SKF 库未加载", "SkfPlugin::openDevice"));
     }
 
     skf::DEVHANDLE hDev = nullptr;
@@ -239,7 +239,7 @@ Result<skf::HAPPLICATION> SkfPlugin::openAppHandle(const QString& devName, const
 
     if (!lib_->OpenApplication) {
         return Result<skf::HAPPLICATION>::err(
-            Error(Error::PluginLoadFailed, "SKF_OpenApplication not available", "SkfPlugin::openAppHandle"));
+            Error(Error::PluginLoadFailed, "SKF_OpenApplication 函数不可用", "SkfPlugin::openAppHandle"));
     }
 
     skf::HAPPLICATION hApp = nullptr;
@@ -318,7 +318,7 @@ Result<skf::HCONTAINER> SkfPlugin::openContainerHandle(const QString& devName, c
 
     if (!lib_->OpenContainer) {
         return Result<skf::HCONTAINER>::err(
-            Error(Error::PluginLoadFailed, "SKF_OpenContainer not available", "SkfPlugin::openContainerHandle"));
+            Error(Error::PluginLoadFailed, "SKF_OpenContainer 函数不可用", "SkfPlugin::openContainerHandle"));
     }
 
     skf::HCONTAINER hContainer = nullptr;
@@ -357,7 +357,7 @@ Result<QList<DeviceInfo>> SkfPlugin::enumDevices(bool /*login*/) {
 
     if (!lib_ || !lib_->EnumDev) {
         return Result<QList<DeviceInfo>>::err(
-            Error(Error::PluginLoadFailed, "SKF library not loaded", "SkfPlugin::enumDevices"));
+            Error(Error::PluginLoadFailed, "SKF 库未加载", "SkfPlugin::enumDevices"));
     }
 
     // 先用预分配缓冲区尝试一次调用获取设备列表，避免双次 EnumDev（减少 USB 扫描开销）
@@ -474,7 +474,7 @@ Result<void> SkfPlugin::changeDeviceAuth(const QString& devName, const QString& 
 
     if (!lib_->DevAuth || !lib_->ChangeDevAuthKey) {
         return Result<void>::err(
-            Error(Error::PluginLoadFailed, "DevAuth/ChangeDevAuthKey not available", "SkfPlugin::changeDeviceAuth"));
+            Error(Error::PluginLoadFailed, "DevAuth/ChangeDevAuthKey 函数不可用", "SkfPlugin::changeDeviceAuth"));
     }
 
     // 先用旧密钥认证
@@ -510,7 +510,7 @@ Result<void> SkfPlugin::setDeviceLabel(const QString& devName, const QString& la
     if (!lib_->SetLabel) {
         closeDevice(devName);
         return Result<void>::err(
-            Error(Error::PluginLoadFailed, "SKF_SetLabel not available", "SkfPlugin::setDeviceLabel"));
+            Error(Error::PluginLoadFailed, "SKF_SetLabel 函数不可用", "SkfPlugin::setDeviceLabel"));
     }
 
     QByteArray labelBytes = label.toLocal8Bit();
@@ -535,7 +535,7 @@ Result<int> SkfPlugin::waitForDeviceEvent() {
 
     if (!lib_ || !lib_->WaitForDevEvent) {
         return Result<int>::err(
-            Error(Error::PluginLoadFailed, "SKF library not loaded", "SkfPlugin::waitForDeviceEvent"));
+            Error(Error::PluginLoadFailed, "SKF 库未加载", "SkfPlugin::waitForDeviceEvent"));
     }
 
     char devName[256] = {};
@@ -564,7 +564,7 @@ Result<QList<AppInfo>> SkfPlugin::enumApps(const QString& devName) {
     if (!lib_->EnumApplication) {
         closeDevice(devName);
         return Result<QList<AppInfo>>::err(
-            Error(Error::PluginLoadFailed, "SKF_EnumApplication not available", "SkfPlugin::enumApps"));
+            Error(Error::PluginLoadFailed, "SKF_EnumApplication 函数不可用", "SkfPlugin::enumApps"));
     }
 
     // 获取缓冲区大小
@@ -633,7 +633,7 @@ Result<void> SkfPlugin::createApp(const QString& devName, const QString& appName
     if (!lib_->CreateApplication) {
         closeDevice(devName);
         return Result<void>::err(
-            Error(Error::PluginLoadFailed, "SKF_CreateApplication not available", "SkfPlugin::createApp"));
+            Error(Error::PluginLoadFailed, "SKF_CreateApplication 函数不可用", "SkfPlugin::createApp"));
     }
 
     QByteArray appBytes = appName.toLocal8Bit();
@@ -679,7 +679,7 @@ Result<void> SkfPlugin::deleteApp(const QString& devName, const QString& appName
     if (!lib_->DeleteApplication) {
         closeDevice(devName);
         return Result<void>::err(
-            Error(Error::PluginLoadFailed, "SKF_DeleteApplication not available", "SkfPlugin::deleteApp"));
+            Error(Error::PluginLoadFailed, "SKF_DeleteApplication 函数不可用", "SkfPlugin::deleteApp"));
     }
 
     // 步骤3：设备认证（删除应用需要设备认证）
@@ -716,7 +716,7 @@ Result<void> SkfPlugin::openApp(const QString& devName, const QString& appName, 
 
     if (!lib_->VerifyPIN) {
         return Result<void>::err(
-            Error(Error::PluginLoadFailed, "SKF_VerifyPIN not available", "SkfPlugin::openApp"));
+            Error(Error::PluginLoadFailed, "SKF_VerifyPIN 函数不可用", "SkfPlugin::openApp"));
     }
 
     // 0 = admin, 1 = user
@@ -761,7 +761,7 @@ Result<void> SkfPlugin::changePin(const QString& devName, const QString& appName
     if (!lib_->ChangePIN) {
         closeAppHandle(devName, appName);
         return Result<void>::err(
-            Error(Error::PluginLoadFailed, "SKF_ChangePIN not available", "SkfPlugin::changePin"));
+            Error(Error::PluginLoadFailed, "SKF_ChangePIN 函数不可用", "SkfPlugin::changePin"));
     }
 
     skf::ULONG pinType = (role.toLower() == "admin") ? 0 : 1;
@@ -792,7 +792,7 @@ Result<void> SkfPlugin::unlockPin(const QString& devName, const QString& appName
     if (!lib_->UnblockPIN) {
         closeAppHandle(devName, appName);
         return Result<void>::err(
-            Error(Error::PluginLoadFailed, "SKF_UnblockPIN not available", "SkfPlugin::unlockPin"));
+            Error(Error::PluginLoadFailed, "SKF_UnblockPIN 函数不可用", "SkfPlugin::unlockPin"));
     }
 
     QByteArray adminPinBytes = adminPin.toLocal8Bit();
@@ -822,7 +822,7 @@ Result<int> SkfPlugin::getRetryCount(const QString& devName, const QString& appN
     if (!lib_->VerifyPIN) {
         closeAppHandle(devName, appName);
         return Result<int>::err(
-            Error(Error::PluginLoadFailed, "SKF_VerifyPIN not available", "SkfPlugin::getRetryCount"));
+            Error(Error::PluginLoadFailed, "SKF_VerifyPIN 函数不可用", "SkfPlugin::getRetryCount"));
     }
 
     skf::ULONG pinType = (role.toLower() == "admin") ? 0 : 1;
@@ -850,7 +850,7 @@ Result<QList<ContainerInfo>> SkfPlugin::enumContainers(const QString& devName, c
     if (!lib_->EnumContainer) {
         closeAppHandle(devName, appName);
         return Result<QList<ContainerInfo>>::err(
-            Error(Error::PluginLoadFailed, "SKF_EnumContainer not available", "SkfPlugin::enumContainers"));
+            Error(Error::PluginLoadFailed, "SKF_EnumContainer 函数不可用", "SkfPlugin::enumContainers"));
     }
 
     skf::ULONG size = 0;
@@ -949,7 +949,7 @@ Result<void> SkfPlugin::createContainer(const QString& devName, const QString& a
     if (!lib_->VerifyPIN) {
         closeAppHandle(devName, appName);
         return Result<void>::err(
-            Error(Error::PluginLoadFailed, "SKF_VerifyPIN not available", "SkfPlugin::createContainer"));
+            Error(Error::PluginLoadFailed, "SKF_VerifyPIN 函数不可用", "SkfPlugin::createContainer"));
     }
     skf::ULONG pinType = (cached.role.toLower() == "admin") ? 0 : 1;
     QByteArray pinBytes = cached.pin.toLocal8Bit();
@@ -965,7 +965,7 @@ Result<void> SkfPlugin::createContainer(const QString& devName, const QString& a
     if (!lib_->CreateContainer) {
         closeAppHandle(devName, appName);
         return Result<void>::err(
-            Error(Error::PluginLoadFailed, "SKF_CreateContainer not available", "SkfPlugin::createContainer"));
+            Error(Error::PluginLoadFailed, "SKF_CreateContainer 函数不可用", "SkfPlugin::createContainer"));
     }
 
     // 步骤4：创建容器
@@ -1027,7 +1027,7 @@ Result<void> SkfPlugin::deleteContainer(const QString& devName, const QString& a
     if (!lib_->VerifyPIN) {
         closeAppHandle(devName, appName);
         return Result<void>::err(
-            Error(Error::PluginLoadFailed, "SKF_VerifyPIN not available", "SkfPlugin::deleteContainer"));
+            Error(Error::PluginLoadFailed, "SKF_VerifyPIN 函数不可用", "SkfPlugin::deleteContainer"));
     }
     skf::ULONG pinType = (cached.role.toLower() == "admin") ? 0 : 1;
     QByteArray pinBytes = cached.pin.toLocal8Bit();
@@ -1043,7 +1043,7 @@ Result<void> SkfPlugin::deleteContainer(const QString& devName, const QString& a
     if (!lib_->DeleteContainer) {
         closeAppHandle(devName, appName);
         return Result<void>::err(
-            Error(Error::PluginLoadFailed, "SKF_DeleteContainer not available", "SkfPlugin::deleteContainer"));
+            Error(Error::PluginLoadFailed, "SKF_DeleteContainer 函数不可用", "SkfPlugin::deleteContainer"));
     }
 
     // 步骤5：删除容器
@@ -1075,7 +1075,7 @@ Result<QByteArray> SkfPlugin::generateKeyPair(const QString& devName, const QStr
         if (!lib_->GenECCKeyPair) {
             closeContainerHandle(devName, appName, containerName);
             return Result<QByteArray>::err(
-                Error(Error::PluginLoadFailed, "SKF_GenECCKeyPair not available", "SkfPlugin::generateKeyPair"));
+                Error(Error::PluginLoadFailed, "SKF_GenECCKeyPair 函数不可用", "SkfPlugin::generateKeyPair"));
         }
 
         skf::ECCPUBLICKEYBLOB pubKey;
@@ -1095,7 +1095,7 @@ Result<QByteArray> SkfPlugin::generateKeyPair(const QString& devName, const QStr
         if (!lib_->GenRSAKeyPair) {
             closeContainerHandle(devName, appName, containerName);
             return Result<QByteArray>::err(
-                Error(Error::PluginLoadFailed, "SKF_GenRSAKeyPair not available", "SkfPlugin::generateKeyPair"));
+                Error(Error::PluginLoadFailed, "SKF_GenRSAKeyPair 函数不可用", "SkfPlugin::generateKeyPair"));
         }
 
         skf::ULONG bitsLen = 2048;
@@ -1394,7 +1394,7 @@ Result<QByteArray> SkfPlugin::generateCsr(const QString& devName, const QString&
     if (!loginCache_.contains(loginKey)) {
         qWarning() << "[generateCsr] 应用未登录, devName:" << devName << "appName:" << appName;
         return Result<QByteArray>::err(
-            Error(Error::NotLoggedIn, "App not logged in, please login first", "SkfPlugin::generateCsr"));
+            Error(Error::NotLoggedIn, "应用未登录，请先登录", "SkfPlugin::generateCsr"));
     }
 
     // 使用缓存的凭据验证 PIN（每次操作前重新验证）
@@ -1407,7 +1407,7 @@ Result<QByteArray> SkfPlugin::generateCsr(const QString& devName, const QString&
     if (!lib_->VerifyPIN) {
         closeAppHandle(devName, appName);
         return Result<QByteArray>::err(
-            Error(Error::PluginLoadFailed, "SKF_VerifyPIN not available", "SkfPlugin::generateCsr"));
+            Error(Error::PluginLoadFailed, "SKF_VerifyPIN 函数不可用", "SkfPlugin::generateCsr"));
     }
     skf::ULONG pinType = (cached.role.toLower() == "admin") ? 0 : 1;
     QByteArray pinBytes = cached.pin.toLocal8Bit();
@@ -1432,7 +1432,7 @@ Result<QByteArray> SkfPlugin::generateCsr(const QString& devName, const QString&
             if (!lib_->GenECCKeyPair) {
                 closeContainerHandle(devName, appName, containerName);
                 return Result<QByteArray>::err(
-                    Error(Error::PluginLoadFailed, "SKF_GenECCKeyPair not available", "SkfPlugin::generateCsr"));
+                    Error(Error::PluginLoadFailed, "SKF_GenECCKeyPair 函数不可用", "SkfPlugin::generateCsr"));
             }
             skf::ECCPUBLICKEYBLOB tmpPubKey;
             std::memset(&tmpPubKey, 0, sizeof(tmpPubKey));
@@ -1445,7 +1445,7 @@ Result<QByteArray> SkfPlugin::generateCsr(const QString& devName, const QString&
             if (!lib_->GenRSAKeyPair) {
                 closeContainerHandle(devName, appName, containerName);
                 return Result<QByteArray>::err(
-                    Error(Error::PluginLoadFailed, "SKF_GenRSAKeyPair not available", "SkfPlugin::generateCsr"));
+                    Error(Error::PluginLoadFailed, "SKF_GenRSAKeyPair 函数不可用", "SkfPlugin::generateCsr"));
             }
             skf::RSAPUBLICKEYBLOB tmpPubKey;
             std::memset(&tmpPubKey, 0, sizeof(tmpPubKey));
@@ -1461,7 +1461,7 @@ Result<QByteArray> SkfPlugin::generateCsr(const QString& devName, const QString&
     if (!lib_->ExportPublicKey) {
         closeContainerHandle(devName, appName, containerName);
         return Result<QByteArray>::err(
-            Error(Error::PluginLoadFailed, "SKF_ExportPublicKey not available", "SkfPlugin::generateCsr"));
+            Error(Error::PluginLoadFailed, "SKF_ExportPublicKey 函数不可用", "SkfPlugin::generateCsr"));
     }
 
     EvpPKeyGuard pkeyGuard;
@@ -1493,7 +1493,7 @@ Result<QByteArray> SkfPlugin::generateCsr(const QString& devName, const QString&
     if (!pkeyGuard.pkey) {
         closeContainerHandle(devName, appName, containerName);
         return Result<QByteArray>::err(
-            Error(Error::Fail, "Failed to create EVP_PKEY from SKF public key", "SkfPlugin::generateCsr"));
+            Error(Error::Fail, "从 SKF 公钥创建 EVP_PKEY 失败", "SkfPlugin::generateCsr"));
     }
 
     // 步骤 3: 使用 OpenSSL 构建 CertificationRequestInfo (TBS)
@@ -1501,7 +1501,7 @@ Result<QByteArray> SkfPlugin::generateCsr(const QString& devName, const QString&
     if (certReqInfoDer.isEmpty()) {
         closeContainerHandle(devName, appName, containerName);
         return Result<QByteArray>::err(
-            Error(Error::Fail, "Failed to build CSR TBS with OpenSSL", "SkfPlugin::generateCsr"));
+            Error(Error::Fail, "使用 OpenSSL 构建 CSR TBS 失败", "SkfPlugin::generateCsr"));
     }
 
     // 步骤 4: 使用 SKF 硬件对 TBS 进行签名
@@ -1512,7 +1512,7 @@ Result<QByteArray> SkfPlugin::generateCsr(const QString& devName, const QString&
         if (!lib_->DigestInit || !lib_->Digest || !lib_->ECCSignData) {
             closeContainerHandle(devName, appName, containerName);
             return Result<QByteArray>::err(
-                Error(Error::PluginLoadFailed, "SM2 sign functions not available", "SkfPlugin::generateCsr"));
+                Error(Error::PluginLoadFailed, "SM2 签名函数不可用", "SkfPlugin::generateCsr"));
         }
 
         // 获取设备句柄用于哈希
@@ -1567,7 +1567,7 @@ Result<QByteArray> SkfPlugin::generateCsr(const QString& devName, const QString&
             closeDevice(devName);
             closeContainerHandle(devName, appName, containerName);
             return Result<QByteArray>::err(
-                Error(Error::Fail, "Failed to encode ECC signature", "SkfPlugin::generateCsr"));
+                Error(Error::Fail, "ECC 签名编码失败", "SkfPlugin::generateCsr"));
         }
 
         // SM2 路径完成，关闭设备句柄
@@ -1579,7 +1579,7 @@ Result<QByteArray> SkfPlugin::generateCsr(const QString& devName, const QString&
         if (!lib_->RSASignData) {
             closeContainerHandle(devName, appName, containerName);
             return Result<QByteArray>::err(
-                Error(Error::PluginLoadFailed, "SKF_RSASignData not available", "SkfPlugin::generateCsr"));
+                Error(Error::PluginLoadFailed, "SKF_RSASignData 函数不可用", "SkfPlugin::generateCsr"));
         }
 
         // 使用 OpenSSL 软件计算 SHA-256（SHA-256 是公开计算，无需走硬件）
@@ -1593,7 +1593,7 @@ Result<QByteArray> SkfPlugin::generateCsr(const QString& devName, const QString&
             EVP_MD_CTX_free(mdCtx);
             closeContainerHandle(devName, appName, containerName);
             return Result<QByteArray>::err(
-                Error(Error::Fail, "OpenSSL SHA-256 digest failed", "SkfPlugin::generateCsr"));
+                Error(Error::Fail, "OpenSSL SHA-256 摘要计算失败", "SkfPlugin::generateCsr"));
         }
         EVP_MD_CTX_free(mdCtx);
 
@@ -1633,7 +1633,7 @@ Result<QByteArray> SkfPlugin::generateCsr(const QString& devName, const QString&
         if (rsaSigLen == 0) {
             qWarning() << "[generateCsr] RSASignData returned zero length";
             closeContainerHandle(devName, appName, containerName);
-            return Result<QByteArray>::err(Error(Error::Fail, "RSASignData returned zero length", "generateCsr"));
+            return Result<QByteArray>::err(Error(Error::Fail, "RSASignData 返回长度为零", "generateCsr"));
         }
         qDebug() << "[generateCsr] RSA expected sig length:" << rsaSigLen;
 
@@ -1678,7 +1678,7 @@ Result<void> SkfPlugin::importCert(const QString& devName, const QString& appNam
     if (!lib_->ImportCertificate) {
         closeContainerHandle(devName, appName, containerName);
         return Result<void>::err(
-            Error(Error::PluginLoadFailed, "SKF_ImportCertificate not available", "SkfPlugin::importCert"));
+            Error(Error::PluginLoadFailed, "SKF_ImportCertificate 函数不可用", "SkfPlugin::importCert"));
     }
 
     skf::ULONG ret = lib_->ImportCertificate(
@@ -1723,7 +1723,7 @@ static Result<QByteArray> parseGmt0009ToEnvelopedKeyBlob(const QByteArray& keyDa
     ASN1_get_object(&p, &totalLen, &tag, &cls, len);
     if (tag != V_ASN1_SEQUENCE) {
         return Result<QByteArray>::err(
-            Error(Error::InvalidParam, "SM2 key: invalid outer SEQUENCE", "parseGmt0009ToEnvelopedKeyBlob"));
+            Error(Error::InvalidParam, "SM2 密钥：外层 SEQUENCE 无效", "parseGmt0009ToEnvelopedKeyBlob"));
     }
     const unsigned char* seqEnd = p + totalLen;
 
@@ -1732,7 +1732,7 @@ static Result<QByteArray> parseGmt0009ToEnvelopedKeyBlob(const QByteArray& keyDa
     ASN1_get_object(&p, &objLen, &tag, &cls, seqEnd - p);
     if (tag != V_ASN1_OCTET_STRING) {
         return Result<QByteArray>::err(
-            Error(Error::InvalidParam, "SM2 key: cipherEncPriv not OCTET STRING", "parseGmt0009ToEnvelopedKeyBlob"));
+            Error(Error::InvalidParam, "SM2 密钥：cipherEncPriv 不是 OCTET STRING", "parseGmt0009ToEnvelopedKeyBlob"));
     }
     QByteArray cipherEncPriv(reinterpret_cast<const char*>(p), static_cast<int>(objLen));
     p += objLen;
@@ -1741,7 +1741,7 @@ static Result<QByteArray> parseGmt0009ToEnvelopedKeyBlob(const QByteArray& keyDa
     ASN1_get_object(&p, &objLen, &tag, &cls, seqEnd - p);
     if (tag != V_ASN1_BIT_STRING) {
         return Result<QByteArray>::err(
-            Error(Error::InvalidParam, "SM2 key: encPub not BIT STRING", "parseGmt0009ToEnvelopedKeyBlob"));
+            Error(Error::InvalidParam, "SM2 密钥：encPub 不是 BIT STRING", "parseGmt0009ToEnvelopedKeyBlob"));
     }
     const unsigned char* pubData = p + 1;  // 跳过 unused bits byte
     long pubLen = objLen - 1;
@@ -1751,7 +1751,7 @@ static Result<QByteArray> parseGmt0009ToEnvelopedKeyBlob(const QByteArray& keyDa
     ASN1_get_object(&p, &objLen, &tag, &cls, seqEnd - p);
     if (tag != V_ASN1_SEQUENCE) {
         return Result<QByteArray>::err(
-            Error(Error::InvalidParam, "SM2 key: cipherSymKey not SEQUENCE", "parseGmt0009ToEnvelopedKeyBlob"));
+            Error(Error::InvalidParam, "SM2 密钥：cipherSymKey 不是 SEQUENCE", "parseGmt0009ToEnvelopedKeyBlob"));
     }
     const unsigned char* symSeqEnd = p + objLen;
 
@@ -1759,7 +1759,7 @@ static Result<QByteArray> parseGmt0009ToEnvelopedKeyBlob(const QByteArray& keyDa
     ASN1_get_object(&p, &objLen, &tag, &cls, symSeqEnd - p);
     if (tag != V_ASN1_INTEGER) {
         return Result<QByteArray>::err(
-            Error(Error::InvalidParam, "SM2 key: x not INTEGER", "parseGmt0009ToEnvelopedKeyBlob"));
+            Error(Error::InvalidParam, "SM2 密钥：x 不是 INTEGER", "parseGmt0009ToEnvelopedKeyBlob"));
     }
     const unsigned char* xData = p;
     long xLen = objLen;
@@ -1770,7 +1770,7 @@ static Result<QByteArray> parseGmt0009ToEnvelopedKeyBlob(const QByteArray& keyDa
     ASN1_get_object(&p, &objLen, &tag, &cls, symSeqEnd - p);
     if (tag != V_ASN1_INTEGER) {
         return Result<QByteArray>::err(
-            Error(Error::InvalidParam, "SM2 key: y not INTEGER", "parseGmt0009ToEnvelopedKeyBlob"));
+            Error(Error::InvalidParam, "SM2 密钥：y 不是 INTEGER", "parseGmt0009ToEnvelopedKeyBlob"));
     }
     const unsigned char* yData = p;
     long yLen = objLen;
@@ -1781,7 +1781,7 @@ static Result<QByteArray> parseGmt0009ToEnvelopedKeyBlob(const QByteArray& keyDa
     ASN1_get_object(&p, &objLen, &tag, &cls, symSeqEnd - p);
     if (tag != V_ASN1_OCTET_STRING) {
         return Result<QByteArray>::err(
-            Error(Error::InvalidParam, "SM2 key: hash not OCTET STRING", "parseGmt0009ToEnvelopedKeyBlob"));
+            Error(Error::InvalidParam, "SM2 密钥：hash 不是 OCTET STRING", "parseGmt0009ToEnvelopedKeyBlob"));
     }
     QByteArray hashData(reinterpret_cast<const char*>(p), static_cast<int>(objLen));
     p += objLen;
@@ -1790,7 +1790,7 @@ static Result<QByteArray> parseGmt0009ToEnvelopedKeyBlob(const QByteArray& keyDa
     ASN1_get_object(&p, &objLen, &tag, &cls, symSeqEnd - p);
     if (tag != V_ASN1_OCTET_STRING) {
         return Result<QByteArray>::err(
-            Error(Error::InvalidParam, "SM2 key: cipherTxt not OCTET STRING", "parseGmt0009ToEnvelopedKeyBlob"));
+            Error(Error::InvalidParam, "SM2 密钥：cipherTxt 不是 OCTET STRING", "parseGmt0009ToEnvelopedKeyBlob"));
     }
     QByteArray cipherTxt(reinterpret_cast<const char*>(p), static_cast<int>(objLen));
 
@@ -1867,7 +1867,7 @@ Result<void> SkfPlugin::importKeyCert(const QString& devName, const QString& app
     if (!loginCache_.contains(loginKey)) {
         qWarning() << "[importKeyCert] 应用未登录, devName:" << devName << "appName:" << appName;
         return Result<void>::err(
-            Error(Error::NotLoggedIn, "App not logged in, please login first", "SkfPlugin::importKeyCert"));
+            Error(Error::NotLoggedIn, "应用未登录，请先登录", "SkfPlugin::importKeyCert"));
     }
     auto appResult = openAppHandle(devName, appName);
     if (appResult.isErr()) {
@@ -1915,7 +1915,7 @@ Result<void> SkfPlugin::importKeyCert(const QString& devName, const QString& app
         if (!lib_->ImportCertificate) {
             closeContainerHandle(devName, appName, containerName);
             return Result<void>::err(
-                Error(Error::PluginLoadFailed, "SKF_ImportCertificate not available", "SkfPlugin::importKeyCert"));
+                Error(Error::PluginLoadFailed, "SKF_ImportCertificate 函数不可用", "SkfPlugin::importKeyCert"));
         }
         skf::ULONG ret = lib_->ImportCertificate(
             hContainer, 1,
@@ -1934,7 +1934,7 @@ Result<void> SkfPlugin::importKeyCert(const QString& devName, const QString& app
         if (!lib_->ImportCertificate) {
             closeContainerHandle(devName, appName, containerName);
             return Result<void>::err(
-                Error(Error::PluginLoadFailed, "SKF_ImportCertificate not available", "SkfPlugin::importKeyCert"));
+                Error(Error::PluginLoadFailed, "SKF_ImportCertificate 函数不可用", "SkfPlugin::importKeyCert"));
         }
         skf::ULONG ret = lib_->ImportCertificate(
             hContainer, 0,
@@ -1956,13 +1956,13 @@ Result<void> SkfPlugin::importKeyCert(const QString& devName, const QString& app
             if (!lib_->ImportRSAKeyPair) {
                 closeContainerHandle(devName, appName, containerName);
                 return Result<void>::err(
-                    Error(Error::PluginLoadFailed, "SKF_ImportRSAKeyPair not available", "SkfPlugin::importKeyCert"));
+                    Error(Error::PluginLoadFailed, "SKF_ImportRSAKeyPair 函数不可用", "SkfPlugin::importKeyCert"));
             }
 
             if (encPrivate.size() < 8) {
                 closeContainerHandle(devName, appName, containerName);
                 return Result<void>::err(
-                    Error(Error::InvalidParam, "RSA key data too short", "SkfPlugin::importKeyCert"));
+                    Error(Error::InvalidParam, "RSA 密钥数据过短", "SkfPlugin::importKeyCert"));
             }
 
             const auto* raw = reinterpret_cast<const uint8_t*>(encPrivate.constData());
@@ -1974,7 +1974,7 @@ Result<void> SkfPlugin::importKeyCert(const QString& devName, const QString& app
             if (static_cast<int>(8 + wrappedKeyLen) > encPrivate.size()) {
                 closeContainerHandle(devName, appName, containerName);
                 return Result<void>::err(
-                    Error(Error::InvalidParam, "RSA wrappedKey length overflow", "SkfPlugin::importKeyCert"));
+                    Error(Error::InvalidParam, "RSA 封装密钥长度溢出", "SkfPlugin::importKeyCert"));
             }
 
             skf::BYTE* pbWrappedKey = const_cast<skf::BYTE*>(raw + 8);
@@ -2001,7 +2001,7 @@ Result<void> SkfPlugin::importKeyCert(const QString& devName, const QString& app
             if (!lib_->ImportECCKeyPair) {
                 closeContainerHandle(devName, appName, containerName);
                 return Result<void>::err(
-                    Error(Error::PluginLoadFailed, "SKF_ImportECCKeyPair not available", "SkfPlugin::importKeyCert"));
+                    Error(Error::PluginLoadFailed, "SKF_ImportECCKeyPair 函数不可用", "SkfPlugin::importKeyCert"));
             }
 
             // 检查是否为 GMT-0016 小端格式（Go: bytes.HasPrefix(key, {0x01,0x00,0x00,0x00,0x01,0x04,0x00,0x00})）
@@ -2062,7 +2062,7 @@ Result<QByteArray> SkfPlugin::exportCert(const QString& devName, const QString& 
     if (!lib_->ExportCertificate) {
         closeContainerHandle(devName, appName, containerName);
         return Result<QByteArray>::err(
-            Error(Error::PluginLoadFailed, "SKF_ExportCertificate not available", "SkfPlugin::exportCert"));
+            Error(Error::PluginLoadFailed, "SKF_ExportCertificate 函数不可用", "SkfPlugin::exportCert"));
     }
 
     // 获取证书大小
@@ -2113,7 +2113,7 @@ Result<CertInfo> SkfPlugin::getCertInfo(const QString& devName, const QString& a
     // 解析 X.509 DER 格式证书
     if (certData.size() < 10) {
         return Result<CertInfo>::err(
-            Error(Error::InvalidParam, "Certificate data too short", "SkfPlugin::getCertInfo"));
+            Error(Error::InvalidParam, "证书数据过短", "SkfPlugin::getCertInfo"));
     }
 
     // 计算公钥哈希 (SHA1, 40字符 hex)
@@ -2154,6 +2154,37 @@ Result<QByteArray> SkfPlugin::sign(const QString& devName, const QString& appNam
         return Result<QByteArray>::err(devResult.error());
     }
 
+    // 检查登录状态（签名操作需要先登录应用）
+    QString loginKey = devName + "/" + appName;
+    if (!loginCache_.contains(loginKey)) {
+        qWarning() << "[sign] 应用未登录, devName:" << devName << "appName:" << appName;
+        return Result<QByteArray>::err(
+            Error(Error::NotLoggedIn, "应用未登录，请先登录", "SkfPlugin::sign"));
+    }
+
+    // 使用缓存的凭据验证 PIN（每次操作前重新验证）
+    auto appResult = openAppHandle(devName, appName);
+    if (appResult.isErr()) {
+        qWarning() << "[sign] 打开应用失败:" << appResult.error().message();
+        return Result<QByteArray>::err(appResult.error());
+    }
+    const LoginInfo& cached = loginCache_[loginKey];
+    if (!lib_->VerifyPIN) {
+        closeAppHandle(devName, appName);
+        return Result<QByteArray>::err(
+            Error(Error::PluginLoadFailed, "SKF_VerifyPIN 函数不可用", "SkfPlugin::sign"));
+    }
+    skf::ULONG pinType = (cached.role.toLower() == "admin") ? 0 : 1;
+    QByteArray pinBytes = cached.pin.toLocal8Bit();
+    skf::ULONG retryCount = 0;
+    skf::ULONG verifyRet = lib_->VerifyPIN(appResult.value(), pinType, pinBytes.constData(), &retryCount);
+    if (verifyRet != skf::SAR_OK) {
+        qWarning() << "[sign] VerifyPIN 失败, ret:" << QString::number(verifyRet, 16);
+        closeAppHandle(devName, appName);
+        return Result<QByteArray>::err(Error::fromSkf(verifyRet, "SKF_VerifyPIN"));
+    }
+    qDebug() << "[sign] VerifyPIN 成功, role:" << cached.role;
+
     // 打开容器（内部会打开设备和应用）
     auto containerResult = openContainerHandle(devName, appName, containerName);
     if (containerResult.isErr()) {
@@ -2172,7 +2203,7 @@ Result<QByteArray> SkfPlugin::sign(const QString& devName, const QString& appNam
     } else {
         closeContainerHandle(devName, appName, containerName);
         return Result<QByteArray>::err(
-            Error(Error::PluginLoadFailed, "SKF_GetContainerType not available", "SkfPlugin::sign"));
+            Error(Error::PluginLoadFailed, "SKF_GetContainerType 函数不可用", "SkfPlugin::sign"));
     }
 
     qDebug() << "[sign] containerType:" << containerType << "(1=RSA, 2=SM2)";
@@ -2182,7 +2213,7 @@ Result<QByteArray> SkfPlugin::sign(const QString& devName, const QString& appNam
     if (!lib_->DigestInit || !lib_->Digest) {
         closeContainerHandle(devName, appName, containerName);
         return Result<QByteArray>::err(
-            Error(Error::PluginLoadFailed, "SKF_DigestInit/Digest not available", "SkfPlugin::sign"));
+            Error(Error::PluginLoadFailed, "SKF_DigestInit/Digest 函数不可用", "SkfPlugin::sign"));
     }
 
     if (isSm2) {
@@ -2190,7 +2221,7 @@ Result<QByteArray> SkfPlugin::sign(const QString& devName, const QString& appNam
         if (!lib_->ECCSignData) {
             closeContainerHandle(devName, appName, containerName);
             return Result<QByteArray>::err(
-                Error(Error::PluginLoadFailed, "SKF_ECCSignData not available", "SkfPlugin::sign"));
+                Error(Error::PluginLoadFailed, "SKF_ECCSignData 函数不可用", "SkfPlugin::sign"));
         }
 
         // 导出签名公钥用于 SM2 预处理
@@ -2248,7 +2279,7 @@ Result<QByteArray> SkfPlugin::sign(const QString& devName, const QString& appNam
         QByteArray derSig = encodeEccSignatureDer(eccSig);
         if (derSig.isEmpty()) {
             return Result<QByteArray>::err(
-                Error(Error::Fail, "Failed to encode ECC signature DER", "SkfPlugin::sign"));
+                Error(Error::Fail, "ECC 签名 DER 编码失败", "SkfPlugin::sign"));
         }
         return Result<QByteArray>::ok(derSig);
 
@@ -2257,7 +2288,7 @@ Result<QByteArray> SkfPlugin::sign(const QString& devName, const QString& appNam
         if (!lib_->RSASignData) {
             closeContainerHandle(devName, appName, containerName);
             return Result<QByteArray>::err(
-                Error(Error::PluginLoadFailed, "SKF_RSASignData not available", "SkfPlugin::sign"));
+                Error(Error::PluginLoadFailed, "SKF_RSASignData 函数不可用", "SkfPlugin::sign"));
         }
 
         // 使用 SKF 硬件计算 SHA-256 哈希（RSA 不需要公钥和 ID）
@@ -2337,7 +2368,7 @@ Result<bool> SkfPlugin::verify(const QString& devName, const QString& appName, c
     if (!lib_->ECCVerify) {
         closeContainerHandle(devName, appName, containerName);
         return Result<bool>::err(
-            Error(Error::PluginLoadFailed, "SKF_ECCVerify not available", "SkfPlugin::verify"));
+            Error(Error::PluginLoadFailed, "SKF_ECCVerify 函数不可用", "SkfPlugin::verify"));
     }
 
     // 需要设备句柄和公钥进行验签
@@ -2386,7 +2417,7 @@ Result<QStringList> SkfPlugin::enumFiles(const QString& devName, const QString& 
     if (!lib_->EnumFiles) {
         closeAppHandle(devName, appName);
         return Result<QStringList>::err(
-            Error(Error::PluginLoadFailed, "SKF_EnumFiles not available", "SkfPlugin::enumFiles"));
+            Error(Error::PluginLoadFailed, "SKF_EnumFiles 函数不可用", "SkfPlugin::enumFiles"));
     }
 
     skf::ULONG size = 0;
@@ -2423,7 +2454,7 @@ Result<QByteArray> SkfPlugin::readFile(const QString& devName, const QString& ap
     if (!lib_->ReadFile) {
         closeAppHandle(devName, appName);
         return Result<QByteArray>::err(
-            Error(Error::PluginLoadFailed, "SKF_ReadFile not available", "SkfPlugin::readFile"));
+            Error(Error::PluginLoadFailed, "SKF_ReadFile 函数不可用", "SkfPlugin::readFile"));
     }
 
     QByteArray fileBytes = fileName.toLocal8Bit();
@@ -2485,7 +2516,7 @@ Result<void> SkfPlugin::writeFile(const QString& devName, const QString& appName
     if (!lib_->WriteFile) {
         closeAppHandle(devName, appName);
         return Result<void>::err(
-            Error(Error::PluginLoadFailed, "SKF_WriteFile not available", "SkfPlugin::writeFile"));
+            Error(Error::PluginLoadFailed, "SKF_WriteFile 函数不可用", "SkfPlugin::writeFile"));
     }
 
     QByteArray fileBytes = fileName.toLocal8Bit();
@@ -2541,7 +2572,7 @@ Result<void> SkfPlugin::deleteFile(const QString& devName, const QString& appNam
     if (!lib_->DeleteFile) {
         closeAppHandle(devName, appName);
         return Result<void>::err(
-            Error(Error::PluginLoadFailed, "SKF_DeleteFile not available", "SkfPlugin::deleteFile"));
+            Error(Error::PluginLoadFailed, "SKF_DeleteFile 函数不可用", "SkfPlugin::deleteFile"));
     }
 
     QByteArray fileBytes = fileName.toLocal8Bit();
@@ -2568,7 +2599,7 @@ Result<QByteArray> SkfPlugin::generateRandom(const QString& devName, int count) 
     if (!lib_->GenRandom) {
         closeDevice(devName);
         return Result<QByteArray>::err(
-            Error(Error::PluginLoadFailed, "SKF_GenRandom not available", "SkfPlugin::generateRandom"));
+            Error(Error::PluginLoadFailed, "SKF_GenRandom 函数不可用", "SkfPlugin::generateRandom"));
     }
 
     QByteArray buffer(count, '\0');
@@ -2626,7 +2657,7 @@ Result<SkfPlugin::ParsedCertInfo> SkfPlugin::parseDerCertificate(const QByteArra
     if (!x509) {
         qWarning() << "[parseDerCertificate] d2i_X509 failed:" << ERR_error_string(ERR_get_error(), nullptr);
         return Result<ParsedCertInfo>::err(
-            Error(Error::InvalidParam, "Failed to parse X.509 certificate", "parseDerCertificate"));
+            Error(Error::InvalidParam, "X.509 证书解析失败", "parseDerCertificate"));
     }
 
     ParsedCertInfo info;

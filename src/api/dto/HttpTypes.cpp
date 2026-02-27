@@ -111,8 +111,8 @@ void HttpResponse::setError(const Error& error) {
             statusText = "Conflict";
             break;
         default:
-            statusCode = 500;
-            statusText = "Internal Server Error";
+            statusCode = 200;
+            statusText = "OK";
             break;
     }
 
@@ -145,6 +145,22 @@ void HttpResponse::setSuccess(const QJsonObject& data) {
     QJsonDocument doc(response);
     body = QString::fromUtf8(doc.toJson(QJsonDocument::Compact));
 }
+
+void HttpResponse::setSuccess(const QJsonValue& data) {
+    statusCode = 200;
+    statusText = "OK";
+    headers["Content-Type"] = "application/json; charset=utf-8";
+
+    QJsonObject response;
+    response["code"] = 0;
+    response["message"] = "success";
+    response["data"] = data;
+
+    QJsonDocument doc(response);
+    body = QString::fromUtf8(doc.toJson(QJsonDocument::Compact));
+}
+
+
 
 }  // namespace api
 }  // namespace wekey

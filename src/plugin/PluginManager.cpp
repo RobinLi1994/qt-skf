@@ -19,12 +19,12 @@ PluginManager::PluginManager() : QObject(nullptr) {}
 Result<void> PluginManager::registerPlugin(const QString& name, const QString& libPath, bool emitSignals) {
     if (name.isEmpty() || libPath.isEmpty()) {
         return Result<void>::err(
-            Error(Error::InvalidParam, "Plugin name and path must not be empty", "PluginManager::registerPlugin"));
+            Error(Error::InvalidParam, "插件名称和路径不能为空", "PluginManager::registerPlugin"));
     }
 
     if (plugins_.contains(name)) {
         return Result<void>::err(
-            Error(Error::AlreadyExists, "Plugin already registered: " + name, "PluginManager::registerPlugin"));
+            Error(Error::AlreadyExists, "插件已注册：" + name, "PluginManager::registerPlugin"));
     }
 
     auto plugin = std::make_shared<SkfPlugin>();
@@ -46,13 +46,13 @@ Result<void> PluginManager::registerPlugin(const QString& name, const QString& l
 Result<void> PluginManager::registerPluginInstance(const QString& name, std::shared_ptr<IDriverPlugin> plugin) {
     if (name.isEmpty() || !plugin) {
         return Result<void>::err(
-            Error(Error::InvalidParam, "Plugin name and instance must not be empty",
+            Error(Error::InvalidParam, "插件名称和实例不能为空",
                   "PluginManager::registerPluginInstance"));
     }
 
     if (plugins_.contains(name)) {
         return Result<void>::err(
-            Error(Error::AlreadyExists, "Plugin already registered: " + name,
+            Error(Error::AlreadyExists, "插件已注册：" + name,
                   "PluginManager::registerPluginInstance"));
     }
 
@@ -68,7 +68,7 @@ Result<void> PluginManager::registerPluginInstance(const QString& name, std::sha
 Result<void> PluginManager::unregisterPlugin(const QString& name, bool emitSignals) {
     if (!plugins_.contains(name)) {
         return Result<void>::err(
-            Error(Error::NotFound, "Plugin not found: " + name, "PluginManager::unregisterPlugin"));
+            Error(Error::NotFound, "插件未找到：" + name, "PluginManager::unregisterPlugin"));
     }
 
     plugins_.remove(name);
@@ -114,7 +114,7 @@ QString PluginManager::activePluginName() const {
 Result<void> PluginManager::setActivePlugin(const QString& name, bool emitSignals) {
     if (!plugins_.contains(name)) {
         return Result<void>::err(
-            Error(Error::NotFound, "Plugin not found: " + name, "PluginManager::setActivePlugin"));
+            Error(Error::NotFound, "插件未找到：" + name, "PluginManager::setActivePlugin"));
     }
 
     activePluginName_ = name;

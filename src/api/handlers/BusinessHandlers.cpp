@@ -9,6 +9,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 
+#include "api/dto/HttpTypes.h"
 #include "api/dto/Request.h"
 #include "api/dto/Response.h"
 #include "config/Config.h"
@@ -25,20 +26,10 @@ HttpResponse BusinessHandlers::handleEnumDev(const HttpRequest& /*request*/) {
     auto result = DeviceService::instance().enumDevices(false, false);
     HttpResponse resp;
     if (result.isErr()) {
-        QJsonObject body;
-        body["code"] = static_cast<int>(result.error().code());
-        body["message"] = result.error().friendlyMessage();
-        body["data"] = QJsonValue::Null;
-        resp.setSuccess();  // keep 200 status
-        resp.body = QString::fromUtf8(QJsonDocument(body).toJson(QJsonDocument::Compact));
+        resp.setError(result.error());
         return resp;
     }
-    QJsonObject body;
-    body["code"] = 0;
-    body["message"] = "success";
-    body["data"] = deviceInfoListToJson(result.value());
-    resp.setSuccess();
-    resp.body = QString::fromUtf8(QJsonDocument(body).toJson(QJsonDocument::Compact));
+    resp.setSuccess(QJsonValue(deviceInfoListToJson(result.value())));
     return resp;
 }
 
@@ -77,18 +68,11 @@ HttpResponse BusinessHandlers::handleLogin(const HttpRequest& request) {
     auto result = AppService::instance().login(req.serialNumber, req.appName, req.role, req.pin, false);
 
     HttpResponse resp;
-    QJsonObject body;
     if (result.isErr()) {
-        body["code"] = static_cast<int>(result.error().code());
-        body["message"] = result.error().friendlyMessage();
-        body["data"] = QJsonValue::Null;
+        resp.setError(result.error());
     } else {
-        body["code"] = 0;
-        body["message"] = "success";
-        body["data"] = QJsonValue::Null;
+        resp.setSuccess();
     }
-    resp.setSuccess();
-    resp.body = QString::fromUtf8(QJsonDocument(body).toJson(QJsonDocument::Compact));
     return resp;
 }
 
@@ -124,18 +108,11 @@ HttpResponse BusinessHandlers::handleLogout(const HttpRequest& request) {
     auto result = AppService::instance().logout(req.serialNumber, req.appName, false);
 
     HttpResponse resp;
-    QJsonObject body;
     if (result.isErr()) {
-        body["code"] = static_cast<int>(result.error().code());
-        body["message"] = result.error().friendlyMessage();
-        body["data"] = QJsonValue::Null;
+        resp.setError(result.error());
     } else {
-        body["code"] = 0;
-        body["message"] = "success";
-        body["data"] = QJsonValue::Null;
+        resp.setSuccess();
     }
-    resp.setSuccess();
-    resp.body = QString::fromUtf8(QJsonDocument(body).toJson(QJsonDocument::Compact));
     return resp;
 }
 
@@ -195,12 +172,7 @@ HttpResponse BusinessHandlers::handleGenCsr(const HttpRequest& request) {
                 req.serialNumber, req.appName, req.containerName);
             if (createResult.isErr()) {
                 HttpResponse resp;
-                QJsonObject body;
-                body["code"] = static_cast<int>(createResult.error().code());
-                body["message"] = createResult.error().friendlyMessage();
-                body["data"] = QJsonValue::Null;
-                resp.setSuccess();
-                resp.body = QString::fromUtf8(QJsonDocument(body).toJson(QJsonDocument::Compact));
+                resp.setError(createResult.error());
                 return resp;
             }
         }
@@ -233,29 +205,23 @@ HttpResponse BusinessHandlers::handleGenCsr(const HttpRequest& request) {
         req.serialNumber, req.appName, req.containerName, args);
 
     HttpResponse resp;
-    QJsonObject body;
     if (result.isErr()) {
-        body["code"] = static_cast<int>(result.error().code());
-        body["message"] = result.error().friendlyMessage();
-        body["data"] = QJsonValue::Null;
-    } else {
-        // 将 DER 编码的 CSR 转换为 PEM 格式（与 Go 逻辑一致）
-        QString pemBody = QString::fromLatin1(result.value().toBase64());
-        // 每 64 字符换行
-        QString formattedPem;
-        for (int i = 0; i < pemBody.size(); i += 64) {
-            formattedPem += pemBody.mid(i, 64) + "\n";
-        }
-        QString csrPem = "-----BEGIN CERTIFICATE REQUEST-----\n" + formattedPem + "-----END CERTIFICATE REQUEST-----\n";
-
-        body["code"] = 0;
-        body["message"] = "success";
-        QJsonObject data;
-        data["csr"] = csrPem;
-        body["data"] = data;
+        resp.setError(result.error());
+        return resp;
     }
-    resp.setSuccess();
-    resp.body = QString::fromUtf8(QJsonDocument(body).toJson(QJsonDocument::Compact));
+
+    // 将 DER 编码的 CSR 转换为 PEM 格式（与 Go 逻辑一致）
+    QString pemBody = QString::fromLatin1(result.value().toBase64());
+    // 每 64 字符换行
+    QString formattedPem;
+    for (int i = 0; i < pemBody.size(); i += 64) {
+        formattedPem += pemBody.mid(i, 64) + "\n";
+    }
+    QString csrPem = "-----BEGIN CERTIFICATE REQUEST-----\n" + formattedPem + "-----END CERTIFICATE REQUEST-----\n";
+
+    QJsonObject data;
+    data["csr"] = csrPem;
+    resp.setSuccess(data);
     return resp;
 }
 
@@ -323,12 +289,7 @@ HttpResponse BusinessHandlers::handleImportCert(const HttpRequest& request) {
         }
         if (sigCertBytes.isEmpty()) {
             HttpResponse resp;
-            resp.setSuccess();
-            QJsonObject body;
-            body["code"] = static_cast<int>(Error::InvalidParam);
-            body["message"] = "Failed to decode sigCert";
-            body["data"] = QJsonValue::Null;
-            resp.body = QString::fromUtf8(QJsonDocument(body).toJson(QJsonDocument::Compact));
+            resp.setError(Error(Error::InvalidParam, "签名证书解码失败", "handleImportCert"));
             return resp;
         }
         qDebug() << "[handleImportCert] sigCert decoded, size:" << sigCertBytes.size();
@@ -352,12 +313,7 @@ HttpResponse BusinessHandlers::handleImportCert(const HttpRequest& request) {
         }
         if (encCertBytes.isEmpty()) {
             HttpResponse resp;
-            resp.setSuccess();
-            QJsonObject body;
-            body["code"] = static_cast<int>(Error::InvalidParam);
-            body["message"] = "Failed to decode encCert";
-            body["data"] = QJsonValue::Null;
-            resp.body = QString::fromUtf8(QJsonDocument(body).toJson(QJsonDocument::Compact));
+            resp.setError(Error(Error::InvalidParam, "加密证书解码失败", "handleImportCert"));
             return resp;
         }
         qDebug() << "[handleImportCert] encCert decoded, size:" << encCertBytes.size();
@@ -368,12 +324,7 @@ HttpResponse BusinessHandlers::handleImportCert(const HttpRequest& request) {
         encPrivateBytes = QByteArray::fromBase64(req.encPrivate.trimmed().toLatin1());
         if (encPrivateBytes.isEmpty()) {
             HttpResponse resp;
-            resp.setSuccess();
-            QJsonObject body;
-            body["code"] = static_cast<int>(Error::InvalidParam);
-            body["message"] = "Failed to decode encPrivate";
-            body["data"] = QJsonValue::Null;
-            resp.body = QString::fromUtf8(QJsonDocument(body).toJson(QJsonDocument::Compact));
+            resp.setError(Error(Error::InvalidParam, "加密私钥解码失败", "handleImportCert"));
             return resp;
         }
         qDebug() << "[handleImportCert] encPrivate decoded, size:" << encPrivateBytes.size();
@@ -386,18 +337,11 @@ HttpResponse BusinessHandlers::handleImportCert(const HttpRequest& request) {
         sigCertBytes, encCertBytes, encPrivateBytes, req.nonGM);
 
     HttpResponse resp;
-    resp.setSuccess();
-    QJsonObject body;
     if (result.isErr()) {
-        body["code"] = static_cast<int>(result.error().code());
-        body["message"] = result.error().friendlyMessage();
-        body["data"] = QJsonValue::Null;
+        resp.setError(result.error());
     } else {
-        body["code"] = 0;
-        body["message"] = "success";
-        body["data"] = QJsonValue::Null;
+        resp.setSuccess();
     }
-    resp.body = QString::fromUtf8(QJsonDocument(body).toJson(QJsonDocument::Compact));
     return resp;
 }
 
@@ -432,56 +376,27 @@ HttpResponse BusinessHandlers::handleExportCert(const HttpRequest& request) {
     auto encCertResult = CertService::instance().getCertInfo(
         req.serialNumber, req.appName, req.containerName, false); // 加密证书
 
-    HttpResponse resp;
-    QJsonObject body;
-    
-    // 转换证书信息为 JSON 对象的 lambda
-    auto certToJson = [](const CertInfo& certInfo) -> QJsonObject {
-        QJsonObject certObj;
-        certObj["subjectDn"] = certInfo.subjectDn;
-        certObj["commonName"] = certInfo.commonName;
-        certObj["issuerDn"] = certInfo.issuerDn;
-        certObj["certType"] = certInfo.certType;
-        certObj["pubKeyHash"] = certInfo.pubKeyHash;
-        certObj["cert"] = certInfo.cert;
-        certObj["serialNumber"] = certInfo.serialNumber;
-        
-        QJsonArray validity;
-        validity.append(certInfo.notBefore.toString("yyyy-MM-dd HH:mm:ss"));
-        validity.append(certInfo.notAfter.toString("yyyy-MM-dd HH:mm:ss"));
-        certObj["validity"] = validity;
-        
-        return certObj;
-    };
-    
-    // 构建证书数组
+    // 构建证书数组，使用 Response.cpp 中的 certInfoToJson 工具函数
     QJsonArray dataArray;
-    
-
 
     // 添加签名证书 (certType=0 在前)
     if (signCertResult.isOk()) {
-        dataArray.append(certToJson(signCertResult.value()));
+        dataArray.append(certInfoToJson(signCertResult.value()));
     }
 
     // 添加加密证书 (certType=1 在后)
     if (encCertResult.isOk()) {
-        dataArray.append(certToJson(encCertResult.value()));
+        dataArray.append(certInfoToJson(encCertResult.value()));
     }
-    
+
+    HttpResponse resp;
     if (dataArray.isEmpty()) {
         // 两个证书都获取失败，返回签名证书的错误
         auto& err = signCertResult.isErr() ? signCertResult.error() : encCertResult.error();
-        body["code"] = static_cast<int>(err.code());
-        body["message"] = err.friendlyMessage();
-        body["data"] = QJsonValue::Null;
+        resp.setError(err);
     } else {
-        body["code"] = 0;
-        body["message"] = "success";
-        body["data"] = dataArray;
+        resp.setSuccess(QJsonValue(dataArray));
     }
-    resp.setSuccess();
-    resp.body = QString::fromUtf8(QJsonDocument(body).toJson(QJsonDocument::Compact));
     return resp;
 }
 
@@ -523,18 +438,11 @@ HttpResponse BusinessHandlers::handleSign(const HttpRequest& request) {
         req.serialNumber, req.appName, req.containerName, data);
 
     HttpResponse resp;
-    QJsonObject body;
     if (result.isErr()) {
-        body["code"] = static_cast<int>(result.error().code());
-        body["message"] = result.error().friendlyMessage();
-        body["data"] = QJsonValue::Null;
+        resp.setError(result.error());
     } else {
-        body["code"] = 0;
-        body["message"] = "success";
-        body["data"] = QString::fromLatin1(result.value().toBase64());
+        resp.setSuccess(QJsonValue(QString::fromLatin1(result.value().toBase64())));
     }
-    resp.setSuccess();
-    resp.body = QString::fromUtf8(QJsonDocument(body).toJson(QJsonDocument::Compact));
     return resp;
 }
 
@@ -571,20 +479,13 @@ HttpResponse BusinessHandlers::handleRandom(const HttpRequest& request) {
     auto result = FileService::instance().generateRandom(req.serialNumber, count);
 
     HttpResponse resp;
-    QJsonObject body;
     if (result.isErr()) {
-        body["code"] = static_cast<int>(result.error().code());
-        body["message"] = result.error().friendlyMessage();
-        body["data"] = QJsonValue::Null;
+        resp.setError(result.error());
     } else {
-        body["code"] = 0;
-        body["message"] = "success";
         QJsonObject data;
         data["randomNum"] = QString::fromLatin1(result.value().toHex());
-        body["data"] = data;
+        resp.setSuccess(data);
     }
-    resp.setSuccess();
-    resp.body = QString::fromUtf8(QJsonDocument(body).toJson(QJsonDocument::Compact));
     return resp;
 }
 

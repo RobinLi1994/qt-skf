@@ -8,6 +8,7 @@
 #pragma once
 
 #include <QJsonObject>
+#include <QJsonValue>
 #include <QMap>
 #include <QString>
 
@@ -100,13 +101,23 @@ struct HttpResponse {
     void setError(const Error& error);
 
     /**
-     * @brief 设置成功响应
+     * @brief 设置成功响应（data 为 JSON 对象）
      * @param data 可选的数据对象，默认为 null
      *
      * 生成标准成功响应格式：
      * { "code": 0, "message": "success", "data": <data> }
      */
     void setSuccess(const QJsonObject& data = QJsonObject());
+
+    /**
+     * @brief 设置成功响应（data 为任意 JSON 值，支持对象、数组、字符串等）
+     * @param data JSON 值（QJsonObject / QJsonArray / QString 等）
+     *
+     * 生成标准成功响应格式：
+     * { "code": 0, "message": "success", "data": <data> }
+     */
+    void setSuccess(const QJsonValue& data);
+
 };
 
 }  // namespace api

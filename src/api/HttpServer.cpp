@@ -30,7 +30,7 @@ HttpServer::~HttpServer() {
 Result<void> HttpServer::start(int port) {
     if (running_) {
         return Result<void>::err(
-            Error(Error::Fail, "server is already running", "HttpServer::start"));
+            Error(Error::Fail, "服务器已在运行", "HttpServer::start"));
     }
 
     tcpServer_ = new QTcpServer(this);
@@ -45,7 +45,7 @@ Result<void> HttpServer::start(int port) {
         tcpServer_ = nullptr;
         return Result<void>::err(
             Error(Error::PortInUse,
-                  QString("failed to listen on port %1: %2").arg(port).arg(errorMsg),
+                  QString("监听端口 %1 失败：%2").arg(port).arg(errorMsg),
                   "HttpServer::start"));
     }
 

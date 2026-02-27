@@ -20,7 +20,7 @@ Result<QList<AppInfo>> AppService::enumApps(const QString& devName) {
     auto* plugin = PluginManager::instance().activePlugin();
     if (!plugin) {
         return Result<QList<AppInfo>>::err(
-            Error(Error::NoActiveModule, "No active plugin", "AppService::enumApps"));
+            Error(Error::NoActiveModule, "驱动模块未激活", "AppService::enumApps"));
     }
     return plugin->enumApps(devName);
 }
@@ -29,7 +29,7 @@ Result<void> AppService::createApp(const QString& devName, const QString& appNam
     auto* plugin = PluginManager::instance().activePlugin();
     if (!plugin) {
         return Result<void>::err(
-            Error(Error::NoActiveModule, "No active plugin", "AppService::createApp"));
+            Error(Error::NoActiveModule, "驱动模块未激活", "AppService::createApp"));
     }
     return plugin->createApp(devName, appName, args);
 }
@@ -38,7 +38,7 @@ Result<void> AppService::deleteApp(const QString& devName, const QString& appNam
     auto* plugin = PluginManager::instance().activePlugin();
     if (!plugin) {
         return Result<void>::err(
-            Error(Error::NoActiveModule, "No active plugin", "AppService::deleteApp"));
+            Error(Error::NoActiveModule, "驱动模块未激活", "AppService::deleteApp"));
     }
     return plugin->deleteApp(devName, appName);
 }
@@ -48,7 +48,7 @@ Result<void> AppService::login(const QString& devName, const QString& appName, c
     auto* plugin = PluginManager::instance().activePlugin();
     if (!plugin) {
         return Result<void>::err(
-            Error(Error::NoActiveModule, "No active plugin", "AppService::login"));
+            Error(Error::NoActiveModule, "驱动模块未激活", "AppService::login"));
     }
 
     auto result = plugin->openApp(devName, appName, role, pin);
@@ -75,7 +75,7 @@ Result<void> AppService::logout(const QString& devName, const QString& appName, 
     auto* plugin = PluginManager::instance().activePlugin();
     if (!plugin) {
         return Result<void>::err(
-            Error(Error::NoActiveModule, "No active plugin", "AppService::logout"));
+            Error(Error::NoActiveModule, "驱动模块未激活", "AppService::logout"));
     }
     auto result = plugin->closeApp(devName, appName);
     if (result.isOk() && emitSignals) {
@@ -89,7 +89,7 @@ Result<void> AppService::changePin(const QString& devName, const QString& appNam
     auto* plugin = PluginManager::instance().activePlugin();
     if (!plugin) {
         return Result<void>::err(
-            Error(Error::NoActiveModule, "No active plugin", "AppService::changePin"));
+            Error(Error::NoActiveModule, "驱动模块未激活", "AppService::changePin"));
     }
     return plugin->changePin(devName, appName, role, oldPin, newPin);
 }
@@ -99,7 +99,7 @@ Result<void> AppService::unlockPin(const QString& devName, const QString& appNam
     auto* plugin = PluginManager::instance().activePlugin();
     if (!plugin) {
         return Result<void>::err(
-            Error(Error::NoActiveModule, "No active plugin", "AppService::unlockPin"));
+            Error(Error::NoActiveModule, "驱动模块未激活", "AppService::unlockPin"));
     }
     return plugin->unlockPin(devName, appName, adminPin, newUserPin, args);
 }
@@ -109,7 +109,7 @@ Result<int> AppService::getRetryCount(const QString& devName, const QString& app
     auto* plugin = PluginManager::instance().activePlugin();
     if (!plugin) {
         return Result<int>::err(
-            Error(Error::NoActiveModule, "No active plugin", "AppService::getRetryCount"));
+            Error(Error::NoActiveModule, "驱动模块未激活", "AppService::getRetryCount"));
     }
     return plugin->getRetryCount(devName, appName, role, pin);
 }

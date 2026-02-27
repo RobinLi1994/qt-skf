@@ -24,7 +24,7 @@ Result<QList<DeviceInfo>> DeviceService::enumDevices(bool login, bool emitSignal
     auto* plugin = PluginManager::instance().activePlugin();
     if (!plugin) {
         return Result<QList<DeviceInfo>>::err(
-            Error(Error::NoActiveModule, "No active plugin", "DeviceService::enumDevices"));
+            Error(Error::NoActiveModule, "驱动模块未激活", "DeviceService::enumDevices"));
     }
     auto result = plugin->enumDevices(login);
     if (result.isOk() && emitSignals) {
@@ -37,7 +37,7 @@ Result<void> DeviceService::changeDeviceAuth(const QString& devName, const QStri
     auto* plugin = PluginManager::instance().activePlugin();
     if (!plugin) {
         return Result<void>::err(
-            Error(Error::NoActiveModule, "No active plugin", "DeviceService::changeDeviceAuth"));
+            Error(Error::NoActiveModule, "驱动模块未激活", "DeviceService::changeDeviceAuth"));
     }
     return plugin->changeDeviceAuth(devName, oldPin, newPin);
 }
@@ -46,7 +46,7 @@ Result<void> DeviceService::setDeviceLabel(const QString& devName, const QString
     auto* plugin = PluginManager::instance().activePlugin();
     if (!plugin) {
         return Result<void>::err(
-            Error(Error::NoActiveModule, "No active plugin", "DeviceService::setDeviceLabel"));
+            Error(Error::NoActiveModule, "驱动模块未激活", "DeviceService::setDeviceLabel"));
     }
     return plugin->setDeviceLabel(devName, label);
 }
