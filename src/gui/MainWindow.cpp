@@ -11,7 +11,6 @@
 #include <QHBoxLayout>
 #include <QIcon>
 #include <QLabel>
-#include <QTimer>
 
 #ifdef Q_OS_WIN
 #include <windows.h>
@@ -97,17 +96,11 @@ MainWindow::MainWindow(QWidget* parent) : ElaWindow(parent) {
                 });
 #endif
 
-        // 有托盘时，关闭按钮隐藏到托盘
+        // 有托盘时，关闭按钮隐藏到托盘；托盘图标由 SystemTray 构造时已显示，
+        // 隐藏窗口不影响其生命周期，无需重新注册。
         setIsDefaultClosed(false);
         connect(this, &MainWindow::closeButtonClicked, this, [this]() {
             hide();
-            // 修复 Windows：hide() 后延迟一个事件循环再重新注册托盘图标，
-            // 确保 Windows 消息泵已处理完 WM_HIDE，避免注册时句柄状态不稳定
-#ifdef Q_OS_WIN
-            QTimer::singleShot(0, this, [this]() {
-                if (systemTray_) systemTray_->reinstall();
-            });
-#endif
         });
     } else {
         // 无托盘时，关闭按钮弹出确认对话框
@@ -124,11 +117,9 @@ void MainWindow::closeEvent(QCloseEvent* event) {
     // ElaWindow 通过 closeButtonClicked 信号处理关闭逻辑
     // 此处仅处理系统级关闭事件（如 Alt+F4 / macOS Cmd+Q）
     if (systemTray_ != nullptr) {
+        // 隐藏窗口而非退出；托盘图标保持可见，无需重新注册
         hide();
         event->ignore();
-#ifdef Q_OS_WIN
-        systemTray_->reinstall();
-#endif
     } else {
         event->ignore();
         closeDialog_->exec();

@@ -20,7 +20,9 @@ SystemTray::SystemTray(QObject* parent) : QObject(parent) {
 
     connect(trayIcon_, &QSystemTrayIcon::activated, this,
             [this](QSystemTrayIcon::ActivationReason reason) {
-                if (reason == QSystemTrayIcon::DoubleClick) {
+                // 单击或双击均可打开主窗口；右键菜单由 contextMenu 单独处理
+                if (reason == QSystemTrayIcon::Trigger ||
+                    reason == QSystemTrayIcon::DoubleClick) {
                     emit showRequested();
                 }
             });
@@ -33,7 +35,9 @@ QSystemTrayIcon* SystemTray::trayIcon() const { return trayIcon_; }
 ElaMenu* SystemTray::trayMenu() const { return trayMenu_; }
 
 void SystemTray::reinstall() {
-    trayIcon_->hide();
+    // 仅在 Windows Explorer 重启（TaskbarCreated）后重新注册图标。
+    // 不在此处调用 hide()：hide() 会触发 Shell_NotifyIcon(NIM_DELETE) 移除图标，
+    // 若紧接着的 show() 在 shell 繁忙时失败，图标将永久消失。
     trayIcon_->show();
 }
 
