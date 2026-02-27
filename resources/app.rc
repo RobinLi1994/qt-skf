@@ -1,0 +1,37 @@
+// Windows 资源文件
+// 定义应用程序图标和版本信息
+
+#include <windows.h>
+
+// 应用程序图标
+IDI_ICON1 ICON "icons/app.ico"
+
+// 版本信息
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION     1,0,0,0
+PRODUCTVERSION  1,0,0,0
+FILEFLAGSMASK   0x3fL
+FILEFLAGS       0x0L
+FILEOS          VOS_NT_WINDOWS32
+FILETYPE        VFT_APP
+FILESUBTYPE     VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "080404b0"
+        BEGIN
+            VALUE "CompanyName",      "TrustAsia"
+            VALUE "FileDescription",  "TrustAsia SKF Device Management Tool"
+            VALUE "FileVersion",      "1.0.0.0"
+            VALUE "InternalName",     "wekey-skf"
+            VALUE "LegalCopyright",   "Copyright (C) 2024-2026 TrustAsia. All rights reserved."
+            VALUE "OriginalFilename", "wekey-skf.exe"
+            VALUE "ProductName",      "WekeySkf"
+            VALUE "ProductVersion",   "1.0.0.0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x804, 1200
+    END
+END

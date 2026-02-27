@@ -40,12 +40,11 @@ MainWindow::MainWindow(QWidget* parent) : ElaWindow(parent) {
     // Auto 模式：窗口宽时展开导航栏，窄时自动折叠
     setNavigationBarDisplayMode(ElaNavigationType::Auto);
 
-    // 用户信息卡片
+    // 用户信息卡片（头像显示项目 logo，避免 ElaWidgetTools 默认头像）
     setUserInfoCardVisible(true);
     setUserInfoCardTitle("wekey-skf");
     setUserInfoCardSubTitle("SKF 设备管理工具");
-    // 加载 logo 图标（通过 QIcon 渲染 SVG 为 QPixmap）
-    QPixmap logoPix = QIcon(":/icons/logo.svg").pixmap(60, 60);
+    QPixmap logoPix = QIcon(":/icons/app.png").pixmap(60, 60);
     if (!logoPix.isNull()) {
         setUserInfoCardPixmap(logoPix);
     }
