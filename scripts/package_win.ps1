@@ -101,11 +101,15 @@ if (-not $OpenSSLFound) {
 }
 
 # ==============================================================================
-# 5. 复制 vendor 库 (SKF 驱动)
+# 5. 嵌入内置 SKF 库到 exe 同目录
 # ==============================================================================
-Write-Host "--- Step 5: Copy Vendor Libraries ---"
-if (Test-Path "vendor") {
-    Copy-Item -Recurse "vendor" -Destination "${DistDir}/vendor"
+Write-Host "--- Step 5: Embed Built-in SKF Library ---"
+$SkfLibSrc = "resources\lib\win\mtoken_gm3000.dll"
+if (Test-Path $SkfLibSrc) {
+    Copy-Item $SkfLibSrc -Destination "${DistDir}\mtoken_gm3000.dll"
+    Write-Host "Embedded SKF library: ${SkfLibSrc} -> ${DistDir}\mtoken_gm3000.dll"
+} else {
+    Write-Host "WARN: Built-in SKF library not found: ${SkfLibSrc}"
 }
 
 # ==============================================================================

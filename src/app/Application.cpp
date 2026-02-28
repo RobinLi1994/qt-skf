@@ -162,12 +162,15 @@ void Application::loadPlugins() {
 
     QJsonObject paths = config.modPaths();
 
-    // 如果没有配置任何模块，自动注册内置 SKF 库
+    // 策略：用户配置的模块优先，无配置时用内置模块兜底
     if (paths.isEmpty()) {
+        LOG_INFO("用户未配置任何模块，尝试注册内置 SKF 库");
         QString builtinPath = registerBuiltinModule();
         if (!builtinPath.isEmpty()) {
             paths = config.modPaths();
         }
+    } else {
+        LOG_INFO(QString("从配置加载 %1 个用户模块").arg(paths.size()));
     }
 
     for (auto it = paths.begin(); it != paths.end(); ++it) {
@@ -189,21 +192,9 @@ void Application::loadPlugins() {
 }
 
 QString Application::registerBuiltinModule() {
-    QString appDir = QCoreApplication::applicationDirPath();
-    // 从 build/src/app 到 build/lib，需要 ../../lib
-    QString libDir = appDir + "/../../lib";
-
-#ifdef Q_OS_MACOS
-    QString libName = "libgm3000.dylib";
-#elif defined(Q_OS_WIN)
-    QString libName = "mtoken_gm3000.dll";
-#else
-    QString libName = "libgm3000.so";
-#endif
-
-    QString libPath = QDir(libDir).absoluteFilePath(libName);
-    if (!QFile::exists(libPath)) {
-        LOG_INFO(QString("未找到内置 SKF 库: %1").arg(libPath));
+    QString libPath = findBuiltinLibPath();
+    if (libPath.isEmpty()) {
+        LOG_INFO("未找到内置 SKF 库，跳过内置模块注册");
         return {};
     }
 
@@ -214,6 +205,52 @@ QString Application::registerBuiltinModule() {
 
     LOG_INFO(QString("已注册内置模块: gm3000 (%1)").arg(libPath));
     return libPath;
+}
+
+QString Application::findBuiltinLibPath() const {
+    QString appDir = QCoreApplication::applicationDirPath();
+
+#ifdef Q_OS_MACOS
+    QString libName = "libgm3000.dylib";
+#elif defined(Q_OS_WIN)
+    QString libName = "mtoken_gm3000.dll";
+#else
+    QString libName = "libgm3000.so";
+#endif
+
+    // 按优先级搜索内置 SKF 库位置
+    QStringList searchPaths;
+
+#ifdef Q_OS_MACOS
+    // macOS 打包环境: wekey-skf.app/Contents/MacOS/../Frameworks/
+    searchPaths << appDir + "/../Frameworks/" + libName;
+#endif
+
+#ifdef Q_OS_WIN
+    // Windows 打包环境: exe 同目录
+    searchPaths << appDir + "/" + libName;
+#endif
+
+    // 开发环境: build/lib/ (CMake POST_BUILD 拷贝的位置)
+    // macOS .app bundle: appDir = build/src/app/wekey-skf.app/Contents/MacOS
+    //   -> ../../../../../lib = build/lib
+    // Linux/Windows 非 bundle: appDir = build/src/app
+    //   -> ../../lib = build/lib
+    searchPaths << appDir + "/../../../../../lib/" + libName;
+    searchPaths << appDir + "/../../lib/" + libName;
+
+    for (const auto& candidate : searchPaths) {
+        QString absPath = QDir(candidate).absolutePath();
+        // QDir::absolutePath 会规范化路径中的 .. 等
+        QFileInfo fi(absPath);
+        if (fi.exists() && fi.isFile()) {
+            LOG_INFO(QString("找到内置 SKF 库: %1").arg(absPath));
+            return absPath;
+        }
+        LOG_DEBUG(QString("内置 SKF 库候选路径不存在: %1").arg(absPath));
+    }
+
+    return {};
 }
 
 }  // namespace wekey

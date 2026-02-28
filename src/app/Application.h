@@ -93,10 +93,22 @@ private:
     void loadPlugins();
 
     /**
-     * @brief 注册内置 SKF 模块
+     * @brief 注册内置 SKF 模块（仅在用户未配置任何模块时调用）
      * @return 模块路径，未找到返回空字符串
      */
     QString registerBuiltinModule();
+
+    /**
+     * @brief 搜索内置 SKF 库路径
+     *
+     * 按优先级搜索以下位置：
+     * - macOS 打包: Contents/Frameworks/libgm3000.dylib
+     * - Windows 打包: exe 同目录/mtoken_gm3000.dll
+     * - 开发环境: build/lib/ 下的库文件
+     *
+     * @return 找到的库路径，未找到返回空字符串
+     */
+    QString findBuiltinLibPath() const;
 
     std::unique_ptr<QLockFile> lockFile_;
     bool isPrimary_{false};

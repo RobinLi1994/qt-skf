@@ -75,11 +75,32 @@ else
 fi
 
 # ==============================================================================
-# 4. 复制 vendor 库 (SKF 驱动)
+# 4. 嵌入内置 SKF 库到 .app bundle
 # ==============================================================================
-echo "--- Step 4: Copy Vendor Libraries ---"
-if [ -d "vendor" ]; then
-    cp -R vendor "${DIST_DIR}/vendor"
+echo "--- Step 4: Embed Built-in SKF Library ---"
+if [ -d "${DIST_DIR}/${APP_NAME}.app" ]; then
+    FRAMEWORKS_DIR="${DIST_DIR}/${APP_NAME}.app/Contents/Frameworks"
+    mkdir -p "${FRAMEWORKS_DIR}"
+
+    # 按架构选择对应的 SKF 库
+    # arm64 用 libgm3000.dylib，amd64 用 libgm3000.1.0_x86.dylib
+    if [ "${ARCH}" = "amd64" ]; then
+        SKF_LIB_SRC="resources/lib/mac/libgm3000.1.0_x86.dylib"
+    else
+        SKF_LIB_SRC="resources/lib/mac/libgm3000.dylib"
+    fi
+
+    if [ -f "${SKF_LIB_SRC}" ]; then
+        # 统一拷贝为 libgm3000.dylib，运行时代码只认这个名字
+        cp "${SKF_LIB_SRC}" "${FRAMEWORKS_DIR}/libgm3000.dylib"
+        # 修正 dylib 的 install_name，使其可通过 @rpath 加载
+        install_name_tool -id @rpath/libgm3000.dylib "${FRAMEWORKS_DIR}/libgm3000.dylib" 2>/dev/null || true
+        echo "Embedded SKF library (${ARCH}): ${SKF_LIB_SRC} -> Frameworks/libgm3000.dylib"
+    else
+        echo "WARN: Built-in SKF library not found: ${SKF_LIB_SRC}"
+    fi
+else
+    echo "Skipping SKF library embedding (no .app bundle)"
 fi
 
 # ==============================================================================
